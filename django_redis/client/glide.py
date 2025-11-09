@@ -27,30 +27,47 @@ class GlideClient(DefaultClient):
     GLIDE client implementation for django-redis.
 
     This client uses valkey-glide, a high-performance Rust-based client library.
-    Configuration is provided via CLIENT_CLASS_CONFIG in OPTIONS, which maps
-    directly to GLIDE's configuration objects.
 
-    Example configuration:
+    LOCATION string is parsed to extract connection details (addresses, database_id,
+    credentials, TLS settings). CLIENT_CLASS_CONFIG can override any of these values
+    and provides additional GLIDE-specific configuration.
+
+    Basic configuration (using LOCATION):
         CACHES = {
             "default": {
                 "BACKEND": "django_redis.cache.RedisCache",
-                "LOCATION": "redis://127.0.0.1:6379/1",  # Used for address extraction
+                "LOCATION": "redis://user:pass@127.0.0.1:6379/1",
                 "OPTIONS": {
                     "CLIENT_CLASS": "django_redis.client.glide.GlideClient",
                     "CLIENT_CLASS_CONFIG": {
                         "client_type": "standalone",  # or "cluster"
-                        "addresses": [
-                            {"host": "127.0.0.1", "port": 6379},
-                        ],
                         "request_timeout": 500,  # milliseconds
-                        "use_tls": False,
-                        "database_id": 1,
-                        # Optional authentication
-                        "credentials": {
-                            "username": "user",
-                            "password": "pass",
+                    },
+                },
+            },
+        }
+
+    Advanced configuration (overriding LOCATION):
+        CACHES = {
+            "default": {
+                "BACKEND": "django_redis.cache.RedisCache",
+                "LOCATION": "redis://127.0.0.1:6379/1",  # Provides defaults
+                "OPTIONS": {
+                    "CLIENT_CLASS": "django_redis.client.glide.GlideClient",
+                    "CLIENT_CLASS_CONFIG": {
+                        "client_type": "standalone",
+                        # Override addresses from LOCATION
+                        "addresses": [
+                            {"host": "primary.example.com", "port": 6379},
+                            {"host": "replica.example.com", "port": 6379},
+                        ],
+                        "request_timeout": 500,
+                        "database_id": 2,  # Override from LOCATION
+                        "use_tls": True,  # Override from LOCATION
+                        "credentials": {  # Override from LOCATION
+                            "username": "admin",
+                            "password": "secret",
                         },
-                        # Optional reconnection strategy
                         "reconnect_strategy": {
                             "num_of_retries": 5,
                             "factor": 1000,
@@ -61,8 +78,13 @@ class GlideClient(DefaultClient):
             },
         }
 
-    The CLIENT_CLASS_CONFIG parameters map directly to GLIDE's
-    GlideClientConfiguration or GlideClusterClientConfiguration.
+    LOCATION parsing extracts:
+    - addresses: from host:port
+    - database_id: from URL path (/1) or query param (?db=1)
+    - credentials: from username:password in URL
+    - use_tls: from rediss:// scheme
+
+    CLIENT_CLASS_CONFIG parameters map directly to GLIDE's API and override LOCATION.
     """
 
     def __init__(self, server, params: dict[str, Any], backend: BaseCache) -> None:
@@ -126,7 +148,15 @@ class GlideClient(DefaultClient):
 
     def _build_glide_config(self) -> Any:
         """
-        Build GLIDE configuration from CLIENT_CLASS_CONFIG.
+        Build GLIDE configuration from CLIENT_CLASS_CONFIG and LOCATION.
+
+        LOCATION string is parsed to extract:
+        - addresses (host:port)
+        - database_id (from URL path or db query parameter)
+        - credentials (username:password from URL)
+        - use_tls (from rediss:// scheme)
+
+        CLIENT_CLASS_CONFIG can override any of these values.
 
         Returns:
             GlideClientConfiguration or GlideClusterClientConfiguration
@@ -134,7 +164,10 @@ class GlideClient(DefaultClient):
         config = self._glide_config.copy()
         client_type = config.pop("client_type", "standalone")
 
-        # Build addresses
+        # Parse LOCATION string to get defaults
+        location_config = self._parse_location_string()
+
+        # Build addresses - use CLIENT_CLASS_CONFIG if provided, else LOCATION
         addresses = []
         for addr in config.pop("addresses", []):
             if isinstance(addr, dict):
@@ -146,16 +179,22 @@ class GlideClient(DefaultClient):
                 addresses.append(addr)
 
         if not addresses:
-            # Fallback to parsing from LOCATION
-            addresses = self._parse_addresses_from_location()
+            # Use addresses from LOCATION
+            addresses = location_config.get("addresses", [])
 
-        # Build credentials if provided
+        # Build credentials - use CLIENT_CLASS_CONFIG if provided, else LOCATION
         credentials = None
         creds_config = config.pop("credentials", None)
         if creds_config:
             credentials = self._ServerCredentials(
                 username=creds_config.get("username"),
                 password=creds_config.get("password"),
+            )
+        elif location_config.get("credentials"):
+            creds = location_config["credentials"]
+            credentials = self._ServerCredentials(
+                username=creds.get("username"),
+                password=creds.get("password"),
             )
 
         # Build reconnect strategy if provided
@@ -168,13 +207,19 @@ class GlideClient(DefaultClient):
                 exponent_base=reconnect_config.get("exponent_base", 2),
             )
 
+        # Get TLS setting - CLIENT_CLASS_CONFIG overrides LOCATION
+        use_tls = config.get("use_tls", location_config.get("use_tls", False))
+
+        # Get database_id - CLIENT_CLASS_CONFIG overrides LOCATION
+        database_id = config.get("database_id", location_config.get("database_id", 0))
+
         # Build configuration object
         if client_type == "cluster":
             excluded_keys = ["use_tls", "request_timeout"]
             extra_config = {k: v for k, v in config.items() if k not in excluded_keys}
             return self._GlideClusterClientConfiguration(
                 addresses=addresses,
-                use_tls=config.get("use_tls", False),
+                use_tls=use_tls,
                 credentials=credentials,
                 reconnect_strategy=reconnect_strategy,
                 request_timeout=config.get("request_timeout"),
@@ -185,24 +230,37 @@ class GlideClient(DefaultClient):
         extra_config = {k: v for k, v in config.items() if k not in excluded_keys}
         return self._GlideClientConfiguration(
             addresses=addresses,
-            use_tls=config.get("use_tls", False),
-            database_id=config.get("database_id", 0),
+            use_tls=use_tls,
+            database_id=database_id,
             credentials=credentials,
             reconnect_strategy=reconnect_strategy,
             request_timeout=config.get("request_timeout"),
             **extra_config,
         )
 
-    def _parse_addresses_from_location(self) -> list:
+    def _parse_location_string(self) -> dict:  # noqa: C901
         """
-        Parse addresses from the LOCATION setting as fallback.
+        Parse LOCATION string to extract configuration.
+
+        Extracts:
+        - addresses: List of NodeAddress objects
+        - database_id: From URL path or 'db' query parameter
+        - credentials: Username and password from URL
+        - use_tls: True if scheme is 'rediss://'
 
         Returns:
-            List of NodeAddress objects
+            Dictionary with parsed configuration
         """
-        from urllib.parse import urlparse
+        from contextlib import suppress
+        from urllib.parse import parse_qs, urlparse
 
-        addresses = []
+        result = {
+            "addresses": [],
+            "database_id": 0,
+            "credentials": None,
+            "use_tls": False,
+        }
+
         if isinstance(self._server, (list, tuple)):
             servers = self._server
         else:
@@ -211,11 +269,41 @@ class GlideClient(DefaultClient):
         for server_url in servers:
             if isinstance(server_url, str):
                 parsed = urlparse(server_url)
+
+                # Extract address
                 host = parsed.hostname or "127.0.0.1"
                 port = parsed.port or 6379
-                addresses.append(self._NodeAddress(host, port))
+                result["addresses"].append(self._NodeAddress(host, port))
 
-        return addresses
+                # Extract TLS setting (from first server URL)
+                if not result["use_tls"] and parsed.scheme == "rediss":
+                    result["use_tls"] = True
+
+                # Extract database ID (from first server URL)
+                if result["database_id"] == 0:
+                    # Try path first (e.g., redis://host/1)
+                    if parsed.path and len(parsed.path) > 1:
+                        with suppress(ValueError):
+                            result["database_id"] = int(parsed.path.lstrip("/"))
+
+                    # Try query parameter (e.g., redis://host?db=1)
+                    if result["database_id"] == 0 and parsed.query:
+                        query_params = parse_qs(parsed.query)
+                        if "db" in query_params:
+                            with suppress(ValueError, IndexError):
+                                result["database_id"] = int(query_params["db"][0])
+
+                # Extract credentials (from first server URL)
+                if result["credentials"] is None:
+                    username = parsed.username
+                    password = parsed.password
+                    if username or password:
+                        result["credentials"] = {
+                            "username": username,
+                            "password": password,
+                        }
+
+        return result
 
     def connect(self, index: int = 0):
         """
