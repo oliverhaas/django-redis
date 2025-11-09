@@ -192,25 +192,15 @@ class SentinelConnectionFactory(ConnectionFactory):
 
 
 class ValkeyConnectionFactory(ConnectionFactory):
-    """
-    Connection factory for Valkey client library.
-
-    Uses valkey-py instead of redis-py. Since valkey-py is a fork
-    of redis-py, the implementation is nearly identical.
-    """
+    """Connection factory using valkey-py."""
 
     def __init__(self, options):
         if importlib.util.find_spec("valkey") is None:
-            error_message = (
-                "valkey-py is required to use ValkeyConnectionFactory. "
-                "Install it with: pip install valkey"
-            )
-            raise ImproperlyConfigured(error_message)
+            msg = "valkey-py required. Install: pip install valkey"
+            raise ImproperlyConfigured(msg)
 
-        # Override the default pool and client classes to use Valkey
         options.setdefault("CONNECTION_POOL_CLASS", "valkey.connection.ConnectionPool")
         options.setdefault("REDIS_CLIENT_CLASS", "valkey.client.Valkey")
-
         super().__init__(options)
 
 

@@ -78,32 +78,13 @@ class RedisCache(BaseCache):
         )
 
     def _detect_client_from_url(self, server: str) -> str:
-        """
-        Auto-detect the appropriate client class based on the connection URL scheme.
-
-        If the URL starts with 'valkey://', automatically use DefaultValkeyClient.
-        Otherwise, default to the standard DefaultClient.
-
-        Args:
-            server: Connection string or list of connection strings
-
-        Returns:
-            String path to the appropriate client class
-        """
-        # Handle cases where server is a list/tuple
-        if isinstance(server, (list, tuple)):
-            # Check the first server URL
-            if server:
-                first_server = server[0]
-            else:
-                return "django_redis.client.DefaultClient"
+        """Auto-detect client from URL scheme (valkey:// -> DefaultValkeyClient)."""
+        if isinstance(server, (list, tuple)) and server:
+            first_server = server[0]
         else:
             first_server = server
-
-        # Check if the URL scheme is 'valkey://'
         if isinstance(first_server, str) and first_server.startswith("valkey://"):
             return "django_redis.client.valkey.DefaultValkeyClient"
-
         return "django_redis.client.DefaultClient"
 
     @property
