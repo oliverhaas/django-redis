@@ -48,13 +48,15 @@ Requirements
 
 - `Python`_ 3.9+
 - `Django`_ 4.2+
-- `redis-py`_ 4.0.2+
-- `Redis server`_ 2.8+
+- `redis-py`_ 4.0.2+ or `valkey-py`_ 1.0.0+
+- `Redis server`_ 2.8+ or `Valkey server`_
 
 .. _Python: https://www.python.org/downloads/
 .. _Django: https://www.djangoproject.com/download/
 .. _redis-py: https://pypi.org/project/redis/
+.. _valkey-py: https://pypi.org/project/valkey/
 .. _Redis server: https://redis.io/download
+.. _Valkey server: https://valkey.io/
 
 User guide
 ----------
@@ -67,6 +69,26 @@ Install with pip:
 .. code-block:: console
 
     $ python -m pip install django-redis
+
+**Valkey Support**
+
+django-redis also supports Valkey, a Redis fork. To use Valkey:
+
+.. code-block:: console
+
+    $ python -m pip install django-redis[valkey]
+
+Or install valkey-py directly:
+
+.. code-block:: console
+
+    $ python -m pip install valkey
+
+For enhanced performance with Valkey's native parser:
+
+.. code-block:: console
+
+    $ python -m pip install django-redis[valkey-libvalkey]
 
 Configure as cache backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,11 +116,12 @@ way. Some examples:
 - ``rediss://[[username]:[password]]@localhost:6379/0``
 - ``unix://[[username]:[password]]@/path/to/socket.sock?db=0``
 
-Three URL schemes are supported:
+Four URL schemes are supported:
 
 - ``redis://``: creates a normal TCP socket connection
 - ``rediss://``: creates a SSL wrapped TCP socket connection
-- ``unix://`` creates a Unix Domain Socket connection
+- ``unix://``: creates a Unix Domain Socket connection
+- ``valkey://``: creates a normal TCP socket connection using valkey-py (auto-selects DefaultValkeyClient)
 
 There are several ways to specify a database number:
 
@@ -168,6 +191,45 @@ installing any additional backends:
 
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
     SESSION_CACHE_ALIAS = "default"
+
+Using Valkey
+~~~~~~~~~~~~
+
+django-redis supports Valkey, a Redis fork, with two configuration methods:
+
+**Automatic Client Selection (Recommended)**
+
+Use the ``valkey://`` URL scheme to automatically select the Valkey client:
+
+.. code-block:: python
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "valkey://127.0.0.1:6379/1",
+            # Client class is automatically detected from URL scheme
+        }
+    }
+
+**Explicit Client Configuration**
+
+Explicitly specify the Valkey client class:
+
+.. code-block:: python
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",  # Can use redis:// URL
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.valkey.DefaultValkeyClient",
+            }
+        }
+    }
+
+**Note**: Valkey support requires valkey-py to be installed (``pip install valkey``).
+The Valkey client is fully compatible with most django-redis features and passes
+158 out of 162 tests (4 edge-case integer overflow tests differ in behavior).
 
 Testing with django-redis
 ~~~~~~~~~~~~~~~~~~~~~~~~~

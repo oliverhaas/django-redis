@@ -1,3 +1,4 @@
+import importlib.util
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from django.conf import settings
@@ -188,6 +189,29 @@ class SentinelConnectionFactory(ConnectionFactory):
         )
 
         return super().get_connection_pool(cp_params)
+
+
+class ValkeyConnectionFactory(ConnectionFactory):
+    """
+    Connection factory for Valkey client library.
+
+    Uses valkey-py instead of redis-py. Since valkey-py is a fork
+    of redis-py, the implementation is nearly identical.
+    """
+
+    def __init__(self, options):
+        if importlib.util.find_spec("valkey") is None:
+            error_message = (
+                "valkey-py is required to use ValkeyConnectionFactory. "
+                "Install it with: pip install valkey"
+            )
+            raise ImproperlyConfigured(error_message)
+
+        # Override the default pool and client classes to use Valkey
+        options.setdefault("CONNECTION_POOL_CLASS", "valkey.connection.ConnectionPool")
+        options.setdefault("REDIS_CLIENT_CLASS", "valkey.client.Valkey")
+
+        super().__init__(options)
 
 
 def get_connection_factory(path=None, options=None):
