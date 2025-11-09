@@ -1,3 +1,4 @@
+import importlib.util
 import sys
 from collections.abc import Iterable
 from os import environ
@@ -65,4 +66,9 @@ def pytest_generate_tests(metafunc):
             "sqlite_zlib",
             "sqlite_zstd",
         ]
+
+        # Add valkey test configuration if valkey-py is installed
+        if importlib.util.find_spec("valkey") is not None:
+            settings.append("sqlite_valkey")
+
         metafunc.parametrize("cache_settings", settings)
