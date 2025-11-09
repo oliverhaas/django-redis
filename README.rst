@@ -68,6 +68,20 @@ Install with pip:
 
     $ python -m pip install django-redis
 
+**Valkey GLIDE Support**
+
+django-redis also supports Valkey GLIDE, a high-performance Rust-based client library:
+
+.. code-block:: console
+
+    $ python -m pip install django-redis[glide]
+
+Or install valkey-glide directly:
+
+.. code-block:: console
+
+    $ python -m pip install valkey-glide
+
 Configure as cache backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -168,6 +182,48 @@ installing any additional backends:
 
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
     SESSION_CACHE_ALIAS = "default"
+
+Using Valkey GLIDE
+~~~~~~~~~~~~~~~~~~
+
+django-redis supports Valkey GLIDE, a high-performance Rust-based client library.
+GLIDE requires explicit configuration via ``CLIENT_CLASS_CONFIG``:
+
+.. code-block:: python
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.glide.GlideClient",
+                "CLIENT_CLASS_CONFIG": {
+                    "client_type": "standalone",  # or "cluster"
+                    "addresses": [
+                        {"host": "127.0.0.1", "port": 6379},
+                    ],
+                    "request_timeout": 500,  # milliseconds
+                    "database_id": 1,
+                    # Optional: TLS
+                    "use_tls": False,
+                    # Optional: Authentication
+                    "credentials": {
+                        "username": "user",
+                        "password": "password",
+                    },
+                    # Optional: Reconnection strategy
+                    "reconnect_strategy": {
+                        "num_of_retries": 5,
+                        "factor": 1000,
+                        "exponent_base": 2,
+                    },
+                },
+            }
+        }
+    }
+
+**Note**: GLIDE requires valkey-glide to be installed (``pip install valkey-glide``).
+The ``CLIENT_CLASS_CONFIG`` parameters map directly to GLIDE's configuration API.
 
 Testing with django-redis
 ~~~~~~~~~~~~~~~~~~~~~~~~~
