@@ -4,15 +4,16 @@ from os import environ
 from pathlib import Path
 
 import pytest
-from testcontainers.core.container import DockerContainer
 from testcontainers.redis import RedisContainer
 from xdist.scheduler import LoadScopeScheduling
 
 from django_redis.cache import BaseCache
 from tests.settings_wrapper import SettingsWrapper
 
-# Container backend types
-CONTAINER_BACKENDS = ["redis", "valkey"]
+# Redis versions to test against
+# redis:8 - Latest stable (8.2.x)
+# redis:7.2 - Last 7.x version (7.2.x)
+REDIS_VERSIONS = ["redis:8", "redis:7.2"]
 
 
 class FixtureScheduling(LoadScopeScheduling):
@@ -28,45 +29,72 @@ def pytest_xdist_make_scheduler(log, config):
     return FixtureScheduling(config, log)
 
 
+def pytest_addoption(parser):
+    """Add custom command-line options."""
+    parser.addoption(
+        "--redis-versions",
+        action="store_true",
+        default=False,
+        help="Test against all configured Redis versions instead of just the latest",
+    )
+
+
 def pytest_configure(config):
     sys.path.insert(0, str(Path(__file__).absolute().parent))
 
 
+def pytest_sessionfinish():
+    """Clean up all Redis containers at the end of the test session."""
+    from contextlib import suppress
+
+    for container in _CONTAINER_CACHE.values():
+        with suppress(Exception):
+            container.stop()
+    _CONTAINER_CACHE.clear()
+
+
 @pytest.fixture(scope="session")
-def container_backend(request):
-    """Parametrized fixture to select Redis or Valkey backend."""
-    return getattr(request, "param", "redis")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cache_container(container_backend):
+def redis_version(request):
     """
-    Session-scoped container that starts Redis or Valkey.
+    Parametrized fixture to select Redis version.
 
-    This fixture is autouse=True so it starts automatically once per test session,
-    regardless of which backend is being tested.
+    Can be parametrized to test different Redis versions.
+    Defaults to latest if not parametrized.
     """
-    if container_backend == "valkey":
-        # Valkey uses the valkey/valkey image
-        container = DockerContainer("valkey/valkey:latest")
-        container.with_exposed_ports(6379)
-        container.with_command("valkey-server --protected-mode no")
+    return getattr(request, "param", REDIS_VERSIONS[0])
+
+
+# Cache of running containers per Redis version to avoid restarting
+_CONTAINER_CACHE = {}
+
+
+@pytest.fixture(scope="session")
+def cache_container(redis_version):
+    """
+    Session-scoped container that starts Redis for a specific version.
+
+    Uses container caching to avoid restarting containers when testing
+    multiple Redis versions in the same session.
+    """
+    # Reuse container if already started for this version
+    if redis_version in _CONTAINER_CACHE:
+        container = _CONTAINER_CACHE[redis_version]
     else:
-        # Use the built-in RedisContainer for Redis
-        container = RedisContainer("redis:latest")
-
-    container.start()
+        # Start new container for this Redis version
+        container = RedisContainer(redis_version)
+        container.start()
+        _CONTAINER_CACHE[redis_version] = container
 
     # Store connection info in environment variables
     host = container.get_container_host_ip()
     port = container.get_exposed_port(6379)
     environ["REDIS_HOST"] = host
     environ["REDIS_PORT"] = str(port)
-    environ["REDIS_BACKEND"] = container_backend
+    environ["REDIS_VERSION"] = redis_version
 
     yield container
 
-    container.stop()
+    # Don't stop here - let pytest_sessionfinish handle cleanup
 
 
 @pytest.fixture()
@@ -78,7 +106,15 @@ def settings():
 
 
 @pytest.fixture()
-def cache(cache_settings: str) -> Iterable[BaseCache]:
+def cache(
+    cache_settings: str,
+    cache_container,
+) -> Iterable[BaseCache]:
+    """
+    Django cache fixture that uses the container-based Redis setup.
+
+    Depends on cache_container to ensure Redis is running before Django setup.
+    """
     from django import setup
 
     environ["DJANGO_SETTINGS_MODULE"] = f"settings.{cache_settings}"
@@ -91,6 +127,19 @@ def cache(cache_settings: str) -> Iterable[BaseCache]:
 
 
 def pytest_generate_tests(metafunc):
+    # Parametrize Redis version if requested via --redis-versions flag
+    # Check for cache_container or cache fixtures which depend on redis_version
+    needs_redis_version = (
+        "redis_version" in metafunc.fixturenames
+        or "cache_container" in metafunc.fixturenames
+        or "cache" in metafunc.fixturenames
+    )
+    if needs_redis_version and metafunc.config.getoption(
+        "--redis-versions",
+        default=False,
+    ):
+        metafunc.parametrize("redis_version", REDIS_VERSIONS, scope="session")
+
     if "cache" in metafunc.fixturenames or "session" in metafunc.fixturenames:
         # Container-based settings that use dynamic Redis connection from env vars
         # Each uses a different database number for isolation
