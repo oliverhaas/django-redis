@@ -68,6 +68,9 @@ Install with pip:
 
     $ python -m pip install django-redis
 
+    # Optional: for Valkey GLIDE support (high-performance Rust client)
+    $ python -m pip install django-redis[glide]
+
 Configure as cache backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
