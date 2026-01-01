@@ -51,9 +51,13 @@ class RedisCache(BaseCache):
         )
 
         options = params.get("OPTIONS", {})
+
+        # Auto-detect Valkey client based on connection URL scheme
+        default_client = self._detect_client_from_url(server)
+
         self._client_cls = options.get(
             "CLIENT_CLASS",
-            "django_redis.client.DefaultClient",
+            default_client,
         )
         self._client_cls = import_string(self._client_cls)
         self._client = None
@@ -72,6 +76,16 @@ class RedisCache(BaseCache):
             if self._log_ignored_exceptions
             else None
         )
+
+    def _detect_client_from_url(self, server: str) -> str:
+        """Auto-detect client from URL scheme (valkey:// -> DefaultValkeyClient)."""
+        if isinstance(server, (list, tuple)) and server:
+            first_server = server[0]
+        else:
+            first_server = server
+        if isinstance(first_server, str) and first_server.startswith("valkey://"):
+            return "django_redis.client.valkey.DefaultValkeyClient"
+        return "django_redis.client.DefaultClient"
 
     @property
     def client(self):

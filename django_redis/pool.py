@@ -1,3 +1,4 @@
+import importlib.util
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from django.conf import settings
@@ -188,6 +189,19 @@ class SentinelConnectionFactory(ConnectionFactory):
         )
 
         return super().get_connection_pool(cp_params)
+
+
+class ValkeyConnectionFactory(ConnectionFactory):
+    """Connection factory using valkey-py."""
+
+    def __init__(self, options):
+        if importlib.util.find_spec("valkey") is None:
+            msg = "valkey-py required. Install: pip install valkey"
+            raise ImproperlyConfigured(msg)
+
+        options.setdefault("CONNECTION_POOL_CLASS", "valkey.connection.ConnectionPool")
+        options.setdefault("REDIS_CLIENT_CLASS", "valkey.client.Valkey")
+        super().__init__(options)
 
 
 def get_connection_factory(path=None, options=None):

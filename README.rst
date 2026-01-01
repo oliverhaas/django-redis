@@ -48,12 +48,13 @@ Requirements
 
 - `Python`_ 3.9+
 - `Django`_ 4.2+
-- `redis-py`_ 4.0.2+
-- `Redis server`_ 2.8+
+- `redis-py`_ 4.0.2+ (or `valkey-py`_ 1.0.0+ for Valkey support)
+- `Redis server`_ 2.8+ (or Valkey)
 
 .. _Python: https://www.python.org/downloads/
 .. _Django: https://www.djangoproject.com/download/
 .. _redis-py: https://pypi.org/project/redis/
+.. _valkey-py: https://pypi.org/project/valkey/
 .. _Redis server: https://redis.io/download
 
 User guide
@@ -67,6 +68,9 @@ Install with pip:
 .. code-block:: console
 
     $ python -m pip install django-redis
+
+    # Optional: for Valkey support
+    $ python -m pip install django-redis[valkey]
 
 Configure as cache backend
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,11 +98,12 @@ way. Some examples:
 - ``rediss://[[username]:[password]]@localhost:6379/0``
 - ``unix://[[username]:[password]]@/path/to/socket.sock?db=0``
 
-Three URL schemes are supported:
+URL schemes supported:
 
 - ``redis://``: creates a normal TCP socket connection
 - ``rediss://``: creates a SSL wrapped TCP socket connection
-- ``unix://`` creates a Unix Domain Socket connection
+- ``unix://``: creates a Unix Domain Socket connection
+- ``valkey://``: uses valkey-py client (requires ``pip install valkey``)
 
 There are several ways to specify a database number:
 
