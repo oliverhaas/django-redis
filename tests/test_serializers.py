@@ -21,7 +21,6 @@ class TestPickleSerializer:
     def test_setup_pickle_version_too_high(self):
         with pytest.raises(
             ImproperlyConfigured,
-            match=f"PICKLE_VERSION can't be higher than pickle.HIGHEST_PROTOCOL:"
-            f" {pickle.HIGHEST_PROTOCOL}",
+            match=f"PICKLE_VERSION can't be higher than pickle.HIGHEST_PROTOCOL: {pickle.HIGHEST_PROTOCOL}",
         ):
             PickleSerializer({"PICKLE_VERSION": pickle.HIGHEST_PROTOCOL + 1})

@@ -2,8 +2,9 @@ import datetime
 import threading
 import time
 from collections.abc import Iterable
+from contextlib import suppress
 from datetime import timedelta
-from typing import Union, cast
+from typing import cast
 from unittest.mock import patch
 
 import pytest
@@ -22,17 +23,13 @@ from tests.settings_wrapper import SettingsWrapper
 @pytest.fixture
 def patch_itersize_setting() -> Iterable[None]:
     # destroy cache to force recreation with overriden settings
-    try:
+    with suppress(AttributeError):
         del caches["default"]
-    except AttributeError:
-        pass  # Cache may not exist in current thread context
     with override_settings(DJANGO_REDIS_SCAN_ITERSIZE=30):
         yield
     # destroy cache to force recreation with original settings
-    try:
+    with suppress(AttributeError):
         del caches["default"]
-    except AttributeError:
-        pass  # Cache may not exist in current thread context
 
 
 class TestDjangoRedisCache:
@@ -107,10 +104,10 @@ class TestDjangoRedisCache:
         assert res == "heló"
 
     def test_save_dict(self, cache: RedisCache):
-        if isinstance(cache.client._serializer, (JSONSerializer, MSGPackSerializer)):
+        if isinstance(cache.client._serializer, JSONSerializer | MSGPackSerializer):
             # JSONSerializer and MSGPackSerializer use the isoformat for
             # datetimes.
-            now_dt: Union[str, datetime.datetime] = datetime.datetime.now().isoformat()
+            now_dt: str | datetime.datetime = datetime.datetime.now().isoformat()
         else:
             now_dt = datetime.datetime.now()
 

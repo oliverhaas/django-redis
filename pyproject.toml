@@ -43,18 +43,18 @@ Changelog = "https://oliverhaas.github.io/django-redis-ng/reference/changelog/"
 
 [dependency-groups]
 dev = [
-  "django-stubs==5.2.0",
+  "django-stubs==5.2.9",
   "lz4==4.4.5",
   "msgpack==1.1.2",
-  "mypy==1.15.0",
-  "pre-commit==4.1.0",
-  "pytest==8.3.5",
-  "pytest-cov==6.0.0",
-  "pytest-django==4.10.0",
-  "pytest-mock==3.14.0",
-  "pytest-xdist==3.5.0",
+  "mypy==1.19.1",
+  "pre-commit==4.5.1",
+  "pytest==9.0.2",
+  "pytest-cov==7.0.0",
+  "pytest-django==4.11.1",
+  "pytest-mock==3.15.1",
+  "pytest-xdist==3.8.0",
   "pyzstd==0.19.1",
-  "ruff==0.9.6",
+  "ruff==0.14.13",
 ]
 docs = ["mkdocs==1.6.1", "mkdocs-material==9.6.3", "mike==2.1.3"]
 
@@ -69,7 +69,7 @@ packages = ["django_redis"]
 include = ["django_redis", "LICENSE", "README.md"]
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py313"
 line-length = 120
 fix = true
 
@@ -108,8 +108,7 @@ select = [
   "YTT",    # flake8-2020
 ]
 ignore = [
-  "ANN101",  # Missing type annotation for self
-  "S311",    # Standard pseudo-random generators (not cryptographic)
+  "S311",  # Standard pseudo-random generators (not cryptographic)
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -118,11 +117,15 @@ ban-relative-imports = "all"
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["S101"]  # Allow assert in tests
 "tests/settings/*.py" = ["S105"]  # Allow hardcoded passwords in test settings
-"django_redis/serializers/pickle.py" = ["S301"]  # Pickle is intentional
+"django_redis/serializers/pickle.py" = ["A005", "S301"]  # Pickle is intentional
+"django_redis/serializers/json.py" = ["A005"]  # Intentionally named to match format
+"django_redis/compressors/gzip.py" = ["A005"]  # Intentionally named to match format
+"django_redis/compressors/lzma.py" = ["A005"]  # Intentionally named to match format
+"django_redis/compressors/zlib.py" = ["A005"]  # Intentionally named to match format
 "django_redis/client/mixins/sorted_sets.py" = ["A002"]  # min/max match Redis API
 
 [tool.mypy]
-python_version = "3.14"
+python_version = "3.13"
 plugins = ["mypy_django_plugin.main"]
 pretty = true
 show_error_codes = true

@@ -19,8 +19,7 @@ class PickleSerializer(BaseSerializer):
                 self._pickle_version = int(options["PICKLE_VERSION"])
                 if self._pickle_version > pickle.HIGHEST_PROTOCOL:
                     error_message = (
-                        f"PICKLE_VERSION can't be higher than pickle.HIGHEST_PROTOCOL:"
-                        f" {pickle.HIGHEST_PROTOCOL}"
+                        f"PICKLE_VERSION can't be higher than pickle.HIGHEST_PROTOCOL: {pickle.HIGHEST_PROTOCOL}"
                     )
                     raise ImproperlyConfigured(error_message)
             except (ValueError, TypeError) as e:

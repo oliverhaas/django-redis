@@ -49,10 +49,7 @@ def test_get_django_omit_exceptions(
     assert ignore_exceptions_cache.get("key", default="default") == "default"
 
     assert len(caplog.records) == 3
-    assert all(
-        record.levelname == "ERROR" and record.msg == "Exception ignored"
-        for record in caplog.records
-    )
+    assert all(record.levelname == "ERROR" and record.msg == "Exception ignored" for record in caplog.records)
 
 
 def test_get_django_omit_exceptions_priority_1(settings):
@@ -141,6 +138,4 @@ def test_custom_key_function(cache: RedisCache, settings):
     keys = cache.keys("foo*")
     assert set(keys) == {"foo-bb", "foo-bc"}
     # ensure our custom function was actually called
-    assert {k.decode() for k in cache.client.get_client(write=False).keys("*")} == (
-        {"#1#foo-bc", "#1#foo-bb"}
-    )
+    assert {k.decode() for k in cache.client.get_client(write=False).keys("*")} == ({"#1#foo-bc", "#1#foo-bb"})
