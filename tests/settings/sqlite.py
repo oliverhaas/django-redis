@@ -36,3 +36,5 @@ INSTALLED_APPS = [
 ]
 
 USE_TZ = False
+
+EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

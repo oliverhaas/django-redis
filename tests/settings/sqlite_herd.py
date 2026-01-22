@@ -24,8 +24,14 @@ CACHES = {
     },
 }
 
-INSTALLED_APPS = ["django.contrib.sessions"]
+INSTALLED_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+]
 
 USE_TZ = False
 
 CACHE_HERD_TIMEOUT = 2
+
+EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

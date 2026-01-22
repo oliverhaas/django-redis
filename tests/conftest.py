@@ -38,9 +38,14 @@ def settings():
 @pytest.fixture()
 def cache(cache_settings: str) -> Iterable[BaseCache]:
     from django import setup
+    from django.core import mail
 
     environ["DJANGO_SETTINGS_MODULE"] = f"settings.{cache_settings}"
     setup()
+
+    # Ensure mail.outbox exists for pytest-django's autoclear_mailbox fixture
+    if not hasattr(mail, "outbox"):
+        mail.outbox = []
 
     from django.core.cache import cache as default_cache
 

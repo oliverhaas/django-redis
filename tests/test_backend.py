@@ -22,11 +22,17 @@ from tests.settings_wrapper import SettingsWrapper
 @pytest.fixture
 def patch_itersize_setting() -> Iterable[None]:
     # destroy cache to force recreation with overriden settings
-    del caches["default"]
+    try:
+        del caches["default"]
+    except AttributeError:
+        pass  # Cache may not exist in current thread context
     with override_settings(DJANGO_REDIS_SCAN_ITERSIZE=30):
         yield
     # destroy cache to force recreation with original settings
-    del caches["default"]
+    try:
+        del caches["default"]
+    except AttributeError:
+        pass  # Cache may not exist in current thread context
 
 
 class TestDjangoRedisCache:
