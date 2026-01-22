@@ -84,14 +84,4 @@ jobs:
         run: docker compose -f docker/docker-compose.yml up -d --wait
 
       - name: Run tests
-        run: uv run pytest -n auto --cov=django_redis --cov-report=xml
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v5
-        with:
-          env_vars: PYTHON,DJANGO,REDIS_PY
-          flags: tests
-        env:
-          PYTHON: ${{ matrix.python-version }}
-          DJANGO: ${{ matrix.django-version }}
-          REDIS_PY: ${{ matrix.redis-py-version }}
+        run: uv run pytest -n auto
