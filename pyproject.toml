@@ -1,13 +1,18 @@
-[tool.towncrier]
-directory = "changelog.d"
-filename = "CHANGELOG.rst"
-issue_format = "`#{issue} <https://github.com/jazzband/django-redis/issues/{issue}>`_"
-name = "django-redis"
-package = "django_redis"
-type = [
-  { name = "Features",                  directory = "feature", showcontent = true },
-  { name = "Bug Fixes",                 directory = "bugfix",  showcontent = true },
-  { name = "Miscellaneous",             directory = "misc",  showcontent = true },
-  { name = "Documentation",             directory = "doc",  showcontent = true },
-  { name = "Deprecations and Removals", directory = "removal", showcontent = true },
-]
+[project]
+name = "django-redis-ng"
+version = "6.0.0"
+description = "Full featured redis cache backend for Django (Next Generation)"
+readme = "README.md"
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.9"
+dependencies = ["Django>=4.2,<5.3", "redis>=4.0.2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["django_redis_ng"]
+
+[tool.hatch.build.targets.sdist]
+include = ["django_redis_ng"]
