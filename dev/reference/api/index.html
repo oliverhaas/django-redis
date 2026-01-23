@@ -675,6 +675,33 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#hash-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hash Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sorted-set-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sorted Set Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#list-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      List Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#set-method-options" class="md-nav__link">
     <span class="md-ellipsis">
       Set Method Options
@@ -841,6 +868,33 @@
   <a href="#extended-methods" class="md-nav__link">
     <span class="md-ellipsis">
       Extended Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hash-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hash Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sorted-set-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Sorted Set Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#list-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      List Methods
     </span>
   </a>
   
@@ -1056,6 +1110,182 @@
 <tr>
 <td><code>delete_pattern(pattern)</code></td>
 <td>Delete keys matching pattern</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hash-methods">Hash Methods<a class="headerlink" href="#hash-methods" title="Permanent link">&para;</a></h3>
+<p>Redis hash operations for field-value data structures:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hset(key, field, value)</code></td>
+<td>Set a hash field value</td>
+</tr>
+<tr>
+<td><code>hdel(key, *fields)</code></td>
+<td>Delete hash field(s)</td>
+</tr>
+<tr>
+<td><code>hexists(key, field)</code></td>
+<td>Check if hash field exists</td>
+</tr>
+<tr>
+<td><code>hget(key, field)</code></td>
+<td>Get a hash field value</td>
+</tr>
+<tr>
+<td><code>hgetall(key)</code></td>
+<td>Get all fields and values in a hash</td>
+</tr>
+<tr>
+<td><code>hincrby(key, field, amount=1)</code></td>
+<td>Increment hash field by integer</td>
+</tr>
+<tr>
+<td><code>hincrbyfloat(key, field, amount=1.0)</code></td>
+<td>Increment hash field by float</td>
+</tr>
+<tr>
+<td><code>hlen(key)</code></td>
+<td>Get number of fields in hash</td>
+</tr>
+<tr>
+<td><code>hmget(key, *fields)</code></td>
+<td>Get multiple hash field values</td>
+</tr>
+<tr>
+<td><code>hmset(key, mapping)</code></td>
+<td>Set multiple hash fields</td>
+</tr>
+<tr>
+<td><code>hsetnx(key, field, value)</code></td>
+<td>Set hash field only if it doesn't exist</td>
+</tr>
+<tr>
+<td><code>hvals(key)</code></td>
+<td>Get all values in a hash</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sorted-set-methods">Sorted Set Methods<a class="headerlink" href="#sorted-set-methods" title="Permanent link">&para;</a></h3>
+<p>Redis sorted set operations for scored, ordered collections:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>zadd(key, *args, **kwargs)</code></td>
+<td>Add member(s) with scores</td>
+</tr>
+<tr>
+<td><code>zcard(key)</code></td>
+<td>Get number of members</td>
+</tr>
+<tr>
+<td><code>zcount(key, min, max)</code></td>
+<td>Count members with scores in range</td>
+</tr>
+<tr>
+<td><code>zincrby(key, amount, member)</code></td>
+<td>Increment member's score</td>
+</tr>
+<tr>
+<td><code>zrange(key, start, end, ...)</code></td>
+<td>Get members by index range</td>
+</tr>
+<tr>
+<td><code>zrangebyscore(key, min, max, ...)</code></td>
+<td>Get members by score range</td>
+</tr>
+<tr>
+<td><code>zrank(key, member)</code></td>
+<td>Get member's rank (ascending)</td>
+</tr>
+<tr>
+<td><code>zrevrank(key, member)</code></td>
+<td>Get member's rank (descending)</td>
+</tr>
+<tr>
+<td><code>zrem(key, *members)</code></td>
+<td>Remove member(s)</td>
+</tr>
+<tr>
+<td><code>zremrangebyrank(key, start, end)</code></td>
+<td>Remove members by rank range</td>
+</tr>
+<tr>
+<td><code>zscore(key, member)</code></td>
+<td>Get member's score</td>
+</tr>
+<tr>
+<td><code>zmscore(key, *members)</code></td>
+<td>Get multiple members' scores</td>
+</tr>
+</tbody>
+</table>
+<h3 id="list-methods">List Methods<a class="headerlink" href="#list-methods" title="Permanent link">&para;</a></h3>
+<p>Redis list operations for ordered, indexable collections:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>llen(key)</code></td>
+<td>Get list length</td>
+</tr>
+<tr>
+<td><code>lpush(key, *values)</code></td>
+<td>Prepend value(s) to list</td>
+</tr>
+<tr>
+<td><code>rpush(key, *values)</code></td>
+<td>Append value(s) to list</td>
+</tr>
+<tr>
+<td><code>lpop(key)</code></td>
+<td>Remove and return first element</td>
+</tr>
+<tr>
+<td><code>rpop(key)</code></td>
+<td>Remove and return last element</td>
+</tr>
+<tr>
+<td><code>lindex(key, index)</code></td>
+<td>Get element by index</td>
+</tr>
+<tr>
+<td><code>lrange(key, start, end)</code></td>
+<td>Get elements in range</td>
+</tr>
+<tr>
+<td><code>lset(key, index, value)</code></td>
+<td>Set element at index</td>
+</tr>
+<tr>
+<td><code>ltrim(key, start, end)</code></td>
+<td>Trim list to range</td>
+</tr>
+<tr>
+<td><code>lpos(key, element, ...)</code></td>
+<td>Find element position in list</td>
+</tr>
+<tr>
+<td><code>lmove(src, dst, src_side, dst_side)</code></td>
+<td>Atomically move element between lists</td>
 </tr>
 </tbody>
 </table>

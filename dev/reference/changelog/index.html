@@ -686,6 +686,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#new-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      New Features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#features" class="md-nav__link">
     <span class="md-ellipsis">
       Features
@@ -770,6 +779,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#new-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      New Features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#features" class="md-nav__link">
     <span class="md-ellipsis">
       Features
@@ -821,13 +839,22 @@
 <li>Modernized CI/CD with GitHub Actions</li>
 <li>Added MkDocs documentation with Material theme</li>
 <li>Package name changed to <code>django-redis-ng</code> (import namespace remains <code>django_redis</code>)</li>
+<li>Removed ShardClient and HerdClient (not commonly used, untested)</li>
+<li>Tests now use testcontainers instead of docker-compose</li>
+</ul>
+<h3 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>ClusterClient</strong>: New client for Redis Cluster deployments with server-side sharding</li>
+<li><strong>Hash operations</strong>: <code>hset</code>, <code>hdel</code>, <code>hexists</code>, <code>hget</code>, <code>hgetall</code>, <code>hincrby</code>, <code>hincrbyfloat</code>, <code>hlen</code>, <code>hmget</code>, <code>hmset</code>, <code>hsetnx</code>, <code>hvals</code></li>
+<li><strong>Sorted set operations</strong>: <code>zadd</code>, <code>zcard</code>, <code>zcount</code>, <code>zincrby</code>, <code>zrange</code>, <code>zrangebyscore</code>, <code>zrank</code>, <code>zrevrank</code>, <code>zrem</code>, <code>zremrangebyrank</code>, <code>zscore</code>, <code>zmscore</code></li>
+<li><strong>List operations</strong>: <code>llen</code>, <code>lpush</code>, <code>rpush</code>, <code>lpop</code>, <code>rpop</code>, <code>lindex</code>, <code>lrange</code>, <code>lset</code>, <code>ltrim</code>, <code>lpos</code>, <code>lmove</code></li>
 </ul>
 <h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
 <p>All features from django-redis 5.x are included:</p>
 <ul>
 <li>Full-featured Redis cache backend</li>
 <li>Session backend support</li>
-<li>Pluggable clients (Default, Shard, Herd, Sentinel)</li>
+<li>Pluggable clients (Default, Sentinel, Cluster)</li>
 <li>Pluggable serializers (Pickle, JSON, MsgPack)</li>
 <li>Pluggable compressors (Zlib, Gzip, LZMA, LZ4, Zstandard)</li>
 <li>Connection pooling</li>
