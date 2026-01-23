@@ -5,15 +5,19 @@ from contextlib import suppress
 from os import environ
 from typing import NamedTuple
 
+import docker
 import pytest
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
-import docker
-
 # Available Redis-compatible images
 REDIS_IMAGES = ["redis:latest", "redis/redis-stack-server:latest", "valkey/valkey:latest"]
 DEFAULT_REDIS_IMAGE = "redis:latest"
+
+# Redis Cluster image (runs 6 nodes in single container: 3 masters + 3 replicas)
+# See: https://github.com/Grokzen/docker-redis-cluster
+REDIS_CLUSTER_IMAGE = "grokzen/redis-cluster:7.0.10"
+CLUSTER_PORTS = list(range(7000, 7006))  # Ports 7000-7005
 
 
 class ContainerInfo(NamedTuple):
@@ -41,6 +45,29 @@ def _start_redis_container(image: str) -> ContainerInfo:
     return ContainerInfo(
         host=container.get_container_host_ip(),
         port=int(container.get_exposed_port(6379)),
+        container=container,
+    )
+
+
+def _start_cluster_container() -> ContainerInfo:
+    """Start a Redis Cluster container (grokzen/redis-cluster).
+
+    This image runs 6 Redis nodes (3 masters + 3 replicas) in a single container.
+    Ports 7000-7005 must be bound to fixed ports because Redis Cluster uses
+    gossip protocol where nodes announce their IPs and ports to clients.
+    """
+    container = DockerContainer(REDIS_CLUSTER_IMAGE)
+    # Bind to 0.0.0.0 so cluster nodes are accessible from host
+    container.with_env("IP", "0.0.0.0")  # noqa: S104
+    # Use fixed port bindings (required for cluster gossip to work)
+    for port in CLUSTER_PORTS:
+        container.with_bind_ports(port, port)
+    container.start()
+    # Wait for cluster to be ready
+    wait_for_logs(container, "Cluster state changed: ok")
+    return ContainerInfo(
+        host=container.get_container_host_ip(),
+        port=7000,  # First master node
         container=container,
     )
 
@@ -152,4 +179,40 @@ def sentinel_container(
     host, port = sentinel_container_factory(image)
     environ["SENTINEL_HOST"] = host
     environ["SENTINEL_PORT"] = str(port)
+    return host, port
+
+
+@pytest.fixture(scope="session")
+def cluster_container_factory() -> Generator[tuple[ContainerFactory, ContainerInfo | None]]:
+    """Session-scoped factory for Redis Cluster container.
+
+    Returns a factory function and the cached container info.
+    The cluster uses fixed ports 7000-7005 (required for gossip protocol).
+    """
+    cached_info: list[ContainerInfo | None] = [None]
+
+    def get_container(_image: str = "") -> tuple[str, int]:
+        # Image parameter ignored - cluster always uses grokzen/redis-cluster
+        if cached_info[0] is None:
+            cached_info[0] = _start_cluster_container()
+        info = cached_info[0]
+        return info.host, info.port
+
+    yield get_container, cached_info[0]
+
+    # Cleanup at session end
+    if cached_info[0] is not None:
+        with suppress(Exception):
+            cached_info[0].container.stop()
+
+
+@pytest.fixture
+def cluster_container(
+    cluster_container_factory: tuple[ContainerFactory, ContainerInfo | None],
+) -> tuple[str, int]:
+    """Get a Redis Cluster container."""
+    factory, _ = cluster_container_factory
+    host, port = factory()
+    environ["CLUSTER_HOST"] = host
+    environ["CLUSTER_PORT"] = str(port)
     return host, port

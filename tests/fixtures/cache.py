@@ -27,6 +27,12 @@ SERIALIZERS = {
 CLIENT_CLASSES = {
     "default": "django_redis.client.DefaultClient",
     "sentinel": "django_redis.client.SentinelClient",
+    "cluster": "django_redis.client.ClusterClient",
+}
+
+# Connection factories for specific client types
+CONNECTION_FACTORIES = {
+    "cluster": "django_redis.pool.ClusterConnectionFactory",
 }
 
 
@@ -43,7 +49,7 @@ def serializers(request) -> str | None:
     return request.param
 
 
-@pytest.fixture(params=["default"])
+@pytest.fixture(params=["default", "cluster"])
 def client_class(request) -> str:
     """Parametrized client class fixture."""
     return request.param
@@ -145,6 +151,52 @@ def build_sentinel_cache_config(
     }
 
 
+def build_cluster_cache_config(
+    cluster_host: str,
+    cluster_port: int,
+    *,
+    compressor: str | None = None,
+    serializer: str | None = None,
+) -> dict:
+    """Build a CACHES configuration for Redis Cluster."""
+    options = {
+        "CLIENT_CLASS": CLIENT_CLASSES["cluster"],
+        "CONNECTION_FACTORY": CONNECTION_FACTORIES["cluster"],
+    }
+
+    if compressor and compressor in COMPRESSORS:
+        options["COMPRESSOR"] = COMPRESSORS[compressor]
+    if serializer and serializer in SERIALIZERS:
+        options["SERIALIZER"] = SERIALIZERS[serializer]
+
+    # Cluster doesn't use db numbers - data is sharded across slots
+    location = f"redis://{cluster_host}:{cluster_port}"
+
+    return {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": location,
+            "OPTIONS": options.copy(),
+        },
+        "doesnotexist": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": f"redis://{cluster_host}:56379",  # Non-existent port
+            "OPTIONS": options.copy(),
+        },
+        "sample": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": location,
+            "OPTIONS": options.copy(),
+        },
+        "with_prefix": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": location,
+            "OPTIONS": options.copy(),
+            "KEY_PREFIX": "test-prefix",
+        },
+    }
+
+
 def get_db_number(
     client_class: str,
     compressor: str | None,
@@ -187,6 +239,22 @@ def _make_cache(
                 default_cache.clear()
             return
 
+        with override_settings(CACHES=caches):
+            from django.core.cache import cache as default_cache
+
+            yield default_cache
+            default_cache.clear()
+        return
+
+    # Handle cluster client - needs cluster_container instead of redis_container
+    if client_class_val == "cluster":
+        cluster_host, cluster_port = request.getfixturevalue("cluster_container")
+        caches = build_cluster_cache_config(
+            cluster_host,
+            cluster_port,
+            compressor=compressor_val,
+            serializer=serializer_val,
+        )
         with override_settings(CACHES=caches):
             from django.core.cache import cache as default_cache
 

@@ -6,6 +6,8 @@ from pathlib import Path
 from tests.fixtures import (
     cache,
     client_class,
+    cluster_container,
+    cluster_container_factory,
     compressors,
     redis_container,
     redis_container_factory,
@@ -21,6 +23,8 @@ from tests.fixtures import (
 __all__ = [
     "cache",
     "client_class",
+    "cluster_container",
+    "cluster_container_factory",
     "compressors",
     "redis_container",
     "redis_container_factory",

@@ -8,6 +8,8 @@ from tests.fixtures.cache import (
     serializers,
 )
 from tests.fixtures.containers import (
+    cluster_container,
+    cluster_container_factory,
     redis_container,
     redis_container_factory,
     redis_images,
@@ -19,6 +21,8 @@ from tests.fixtures.settings import settings
 __all__ = [
     "cache",
     "client_class",
+    "cluster_container",
+    "cluster_container_factory",
     "compressors",
     "redis_container",
     "redis_container_factory",
