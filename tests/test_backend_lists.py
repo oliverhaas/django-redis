@@ -162,3 +162,66 @@ class TestListOperations:
 
         assert cache.lrange("mylist", 0, -1, version=1) == ["v1_a", "v1_b"]
         assert cache.lrange("mylist", 0, -1, version=2) == ["v2_a"]
+
+    def test_lpos_basic(self, cache: RedisCache):
+        """Test finding element position in list."""
+        cache.rpush("mylist_lpos", "a", "b", "c", "b", "d")
+
+        # Find first occurrence
+        assert cache.lpos("mylist_lpos", "b") == 1
+
+        # Element not found
+        assert cache.lpos("mylist_lpos", "z") is None
+
+    def test_lpos_with_rank(self, cache: RedisCache):
+        """Test lpos with rank parameter."""
+        cache.rpush("mylist_lpos2", "a", "b", "c", "b", "d", "b")
+
+        # Find second occurrence (rank=2)
+        assert cache.lpos("mylist_lpos2", "b", rank=2) == 3
+
+        # Find from the end (negative rank)
+        assert cache.lpos("mylist_lpos2", "b", rank=-1) == 5
+
+    def test_lpos_with_count(self, cache: RedisCache):
+        """Test lpos with count parameter returns multiple indices."""
+        cache.rpush("mylist_lpos3", "a", "b", "c", "b", "d", "b")
+
+        # Find all occurrences
+        result = cache.lpos("mylist_lpos3", "b", count=0)
+        assert result == [1, 3, 5]
+
+        # Find first 2 occurrences
+        result = cache.lpos("mylist_lpos3", "b", count=2)
+        assert result == [1, 3]
+
+    def test_lmove_basic(self, cache: RedisCache):
+        """Test moving element between lists."""
+        cache.rpush("src_list", "a", "b", "c")
+        cache.rpush("dst_list", "x", "y")
+
+        # Move from src LEFT to dst RIGHT
+        result = cache.lmove("src_list", "dst_list", "LEFT", "RIGHT")
+        assert result == "a"
+
+        assert cache.lrange("src_list", 0, -1) == ["b", "c"]
+        assert cache.lrange("dst_list", 0, -1) == ["x", "y", "a"]
+
+    def test_lmove_directions(self, cache: RedisCache):
+        """Test different lmove directions."""
+        cache.rpush("src2", "1", "2", "3")
+        cache.rpush("dst2", "a")
+
+        # RIGHT to LEFT (rpoplpush equivalent)
+        result = cache.lmove("src2", "dst2", "RIGHT", "LEFT")
+        assert result == "3"
+        assert cache.lrange("src2", 0, -1) == ["1", "2"]
+        assert cache.lrange("dst2", 0, -1) == ["3", "a"]
+
+    def test_lmove_empty_source(self, cache: RedisCache):
+        """Test lmove on empty source list."""
+        cache.rpush("dst3", "x")
+
+        result = cache.lmove("empty_src", "dst3", "LEFT", "RIGHT")
+        assert result is None
+        assert cache.lrange("dst3", 0, -1) == ["x"]

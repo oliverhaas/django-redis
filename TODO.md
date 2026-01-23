@@ -16,12 +16,11 @@ Features and changes we want to make.
   - Branch: `feat/async-support`
 - [ ] Add async API for all other methods
 - [x] Add more Redis method support via mixins
-  - ListMixin: lpush, rpush, lpop, rpop, lrange, lindex, llen, lrem, ltrim, lset, linsert
+  - ListMixin: lpush, rpush, lpop, rpop, lrange, lindex, llen, lrem, ltrim, lset, linsert, lpos, lmove
   - SetMixin: sadd, scard, sdiff, sdiffstore, sinter, sinterstore, sismember, smembers, smove, spop, srandmember, srem, sscan, sscan_iter, sunion, sunionstore
-  - HashMixin: hset, hdel, hlen, hkeys, hexists
-  - SortedSetMixin: zadd, zcard, zcount, zincrby, zpopmax, zpopmin, zrange, zrangebyscore, zrank, zrem, zremrangebyscore, zrevrange, zrevrangebyscore, zscore
+  - HashMixin: hset, hdel, hlen, hkeys, hexists, hget, hgetall, hmget, hmset, hincrby, hincrbyfloat, hsetnx, hvals
+  - SortedSetMixin: zadd, zcard, zcount, zincrby, zpopmax, zpopmin, zrange, zrangebyscore, zrank, zrem, zremrangebyscore, zrevrange, zrevrangebyscore, zscore, zrevrank, zmscore, zremrangebyrank
   - Fixed hash method parameter semantics (key/field vs name/key)
-- [ ] Add more methods to existing mixins as needed (hget, hgetall, lpos, etc.)
 - [ ] Use Python 3.14 builtin zstd when available (with backport fallback)
 
 ## Compression & Serialization

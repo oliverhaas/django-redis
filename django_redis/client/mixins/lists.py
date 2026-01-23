@@ -203,3 +203,61 @@ class ListMixin(ClientProtocol):
         encoded_pivot = self.encode(pivot)
         encoded_value = self.encode(value)
         return int(client.linsert(nkey, where, encoded_pivot, encoded_value))
+
+    def lpos(
+        self,
+        key: KeyT,
+        value: Any,
+        rank: int | None = None,
+        count: int | None = None,
+        maxlen: int | None = None,
+        version: int | None = None,
+        client: Redis | None = None,
+    ) -> int | list[int] | None:
+        """Return the index of matching elements in list.
+
+        Args:
+            value: The value to find
+            rank: The rank of the element to return (1 for first, -1 for last)
+            count: Return up to count matches (returns list if set)
+            maxlen: Limit search to first maxlen elements
+
+        Returns:
+            Index, list of indices (if count set), or None if not found.
+        """
+        if client is None:
+            client = self.get_client(write=False)
+
+        nkey = self.make_key(key, version=version)
+        encoded_value = self.encode(value)
+        return client.lpos(nkey, encoded_value, rank=rank, count=count, maxlen=maxlen)
+
+    def lmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        src_direction: str = "LEFT",
+        dest_direction: str = "RIGHT",
+        version: int | None = None,
+        client: Redis | None = None,
+    ) -> Any | None:
+        """Atomically move element from source list to destination list.
+
+        Args:
+            source: Source list key
+            destination: Destination list key
+            src_direction: "LEFT" or "RIGHT" - which end to pop from source
+            dest_direction: "LEFT" or "RIGHT" - which end to push to destination
+
+        Returns:
+            The element being moved, or None if source is empty.
+        """
+        if client is None:
+            client = self.get_client(write=True)
+
+        nsrc = self.make_key(source, version=version)
+        ndst = self.make_key(destination, version=version)
+        result = client.lmove(nsrc, ndst, src_direction, dest_direction)
+        if result is None:
+            return None
+        return self.decode(result)

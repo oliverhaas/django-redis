@@ -320,3 +320,52 @@ class SortedSetMixin(ClientProtocol):
         score = client.zscore(nkey, value)
 
         return float(score) if score is not None else None
+
+    def zrevrank(
+        self,
+        key: KeyT,
+        value: Any,
+        version: int | None = None,
+        client: Redis | None = None,
+    ) -> int | None:
+        """Get the rank (index) of member in sorted set, ordered high to low."""
+        if client is None:
+            client = self.get_client(write=False)
+
+        nkey = self.make_key(key, version=version)
+        value = self.encode(value)
+        rank = client.zrevrank(nkey, value)
+
+        return int(rank) if rank is not None else None
+
+    def zmscore(
+        self,
+        key: KeyT,
+        *members: Any,
+        version: int | None = None,
+        client: Redis | None = None,
+    ) -> list[float | None]:
+        """Get scores of multiple members in sorted set."""
+        if client is None:
+            client = self.get_client(write=False)
+
+        nkey = self.make_key(key, version=version)
+        encoded_members = [self.encode(member) for member in members]
+        scores = client.zmscore(nkey, encoded_members)
+
+        return [float(score) if score is not None else None for score in scores]
+
+    def zremrangebyrank(
+        self,
+        key: KeyT,
+        start: int,
+        end: int,
+        version: int | None = None,
+        client: Redis | None = None,
+    ) -> int:
+        """Remove members from sorted set by rank range."""
+        if client is None:
+            client = self.get_client(write=True)
+
+        nkey = self.make_key(key, version=version)
+        return int(client.zremrangebyrank(nkey, start, end))

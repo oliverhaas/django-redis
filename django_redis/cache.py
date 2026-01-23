@@ -280,6 +280,38 @@ class RedisCache(BaseCache):
     def hexists(self, *args, **kwargs):
         return self.client.hexists(*args, **kwargs)
 
+    @omit_exception
+    def hget(self, *args, **kwargs):
+        return self.client.hget(*args, **kwargs)
+
+    @omit_exception
+    def hgetall(self, *args, **kwargs):
+        return self.client.hgetall(*args, **kwargs)
+
+    @omit_exception
+    def hmget(self, *args, **kwargs):
+        return self.client.hmget(*args, **kwargs)
+
+    @omit_exception
+    def hmset(self, *args, **kwargs):
+        return self.client.hmset(*args, **kwargs)
+
+    @omit_exception
+    def hincrby(self, *args, **kwargs):
+        return self.client.hincrby(*args, **kwargs)
+
+    @omit_exception
+    def hincrbyfloat(self, *args, **kwargs):
+        return self.client.hincrbyfloat(*args, **kwargs)
+
+    @omit_exception
+    def hsetnx(self, *args, **kwargs):
+        return self.client.hsetnx(*args, **kwargs)
+
+    @omit_exception
+    def hvals(self, *args, **kwargs):
+        return self.client.hvals(*args, **kwargs)
+
     # Sorted Set Operations
     @omit_exception
     def zadd(self, *args, **kwargs):
@@ -337,6 +369,18 @@ class RedisCache(BaseCache):
     def zscore(self, *args, **kwargs):
         return self.client.zscore(*args, **kwargs)
 
+    @omit_exception
+    def zrevrank(self, *args, **kwargs):
+        return self.client.zrevrank(*args, **kwargs)
+
+    @omit_exception
+    def zmscore(self, *args, **kwargs):
+        return self.client.zmscore(*args, **kwargs)
+
+    @omit_exception
+    def zremrangebyrank(self, *args, **kwargs):
+        return self.client.zremrangebyrank(*args, **kwargs)
+
     # List Operations
     @omit_exception
     def lpush(self, *args, **kwargs):
@@ -381,3 +425,11 @@ class RedisCache(BaseCache):
     @omit_exception
     def linsert(self, *args, **kwargs):
         return self.client.linsert(*args, **kwargs)
+
+    @omit_exception
+    def lpos(self, *args, **kwargs):
+        return self.client.lpos(*args, **kwargs)
+
+    @omit_exception
+    def lmove(self, *args, **kwargs):
+        return self.client.lmove(*args, **kwargs)

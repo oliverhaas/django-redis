@@ -215,3 +215,26 @@ class TestSortedSetOperations:
         assert result is None
         result = cache.zpopmax("nonexistent", count=5)
         assert result == []
+
+    def test_zrevrank(self, cache: RedisCache):
+        """Test getting reverse rank (highest score = 0)."""
+        cache.zadd("scores", {"alice": 10.0, "bob": 20.0, "charlie": 15.0})
+        assert cache.zrevrank("scores", "bob") == 0  # Highest score
+        assert cache.zrevrank("scores", "charlie") == 1
+        assert cache.zrevrank("scores", "alice") == 2
+        assert cache.zrevrank("scores", "nonexistent") is None
+
+    def test_zmscore(self, cache: RedisCache):
+        """Test getting multiple scores at once."""
+        cache.zadd("scores", {"a": 1.0, "b": 2.0, "c": 3.0})
+        scores = cache.zmscore("scores", "a", "c", "nonexistent")
+        assert scores == [1.0, 3.0, None]
+
+    def test_zremrangebyrank(self, cache: RedisCache):
+        """Test removing members by rank range."""
+        cache.zadd("scores", {"a": 1.0, "b": 2.0, "c": 3.0, "d": 4.0, "e": 5.0})
+        # Remove elements at rank 1-3 (b, c, d)
+        result = cache.zremrangebyrank("scores", 1, 3)
+        assert result == 3
+        assert cache.zcard("scores") == 2
+        assert cache.zrange("scores", 0, -1) == ["a", "e"]
