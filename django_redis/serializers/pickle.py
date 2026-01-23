@@ -3,6 +3,7 @@ from typing import Any
 
 from django.core.exceptions import ImproperlyConfigured
 
+from django_redis.exceptions import SerializerError
 from django_redis.serializers.base import BaseSerializer
 
 
@@ -30,4 +31,7 @@ class PickleSerializer(BaseSerializer):
         return pickle.dumps(value, self._pickle_version)
 
     def loads(self, value: bytes) -> Any:
-        return pickle.loads(value)
+        try:
+            return pickle.loads(value)
+        except Exception as e:
+            raise SerializerError from e

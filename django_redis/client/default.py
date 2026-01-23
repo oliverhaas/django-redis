@@ -17,7 +17,7 @@ from redis.typing import AbsExpiryT, EncodableT, ExpiryT, KeyT
 
 from django_redis import pool
 from django_redis.client.mixins import HashMixin, ListMixin, SetMixin, SortedSetMixin
-from django_redis.exceptions import CompressorError, ConnectionInterrupted
+from django_redis.exceptions import CompressorError, ConnectionInterrupted, SerializerError
 from django_redis.util import CacheKey
 
 if TYPE_CHECKING:
@@ -58,24 +58,46 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         self._options = params.get("OPTIONS", {})
         self._replica_read_only = self._options.get("REPLICA_READ_ONLY", True)
 
-        serializer_path = self._options.get(
+        serializer_config = self._options.get(
             "SERIALIZER",
             "django_redis.serializers.pickle.PickleSerializer",
         )
-        serializer_cls = import_string(serializer_path)
 
         compressor_config = self._options.get(
             "COMPRESSOR",
             "django_redis.compressors.identity.IdentityCompressor",
         )
 
-        self._serializer = serializer_cls(options=self._options)
+        self._serializers = self._create_serializers(serializer_config)
         self._compressors = self._create_compressors(compressor_config)
 
         self.connection_factory = pool.get_connection_factory(options=self._options)
 
     def __contains__(self, key: KeyT) -> bool:
         return self.has_key(key)
+
+    def _create_serializers(self, serializer_config: str | list) -> list:
+        """Create serializer instance(s) from config.
+
+        Args:
+            serializer_config: Either a single serializer class path (string)
+                or a list of serializer paths for fallback support.
+
+        Returns:
+            List of serializer instances.
+            - First serializer is used for serialization (writing)
+            - All serializers are tried for deserialization (reading)
+        """
+        if isinstance(serializer_config, list):
+            serializers = []
+            for path in serializer_config:
+                serializer_cls = import_string(path)
+                serializers.append(serializer_cls(options=self._options))
+            return serializers
+
+        # Single serializer - wrap in list for consistent handling
+        serializer_cls = import_string(serializer_config)
+        return [serializer_cls(options=self._options)]
 
     def _create_compressors(self, compressor_config: str | list) -> list:
         """Create compressor instance(s) from config.
@@ -530,8 +552,34 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         except (ValueError, TypeError):
             # Handle little values, chosen to be not compressed
             value = self._decompress(value)
-            value = self._serializer.loads(value)
+            value = self._deserialize(value)
         return value
+
+    def _deserialize(self, value: bytes) -> Any:
+        """Deserialize a value, with fallback support for multiple serializers.
+
+        Tries each serializer in order until one succeeds.
+        If all fail, raises SerializerError.
+
+        Args:
+            value: Bytes to deserialize
+
+        Returns:
+            Deserialized Python object
+        """
+        last_error: SerializerError | None = None
+        for serializer in self._serializers:
+            try:
+                return serializer.loads(value)
+            except SerializerError as e:
+                last_error = e
+                continue
+
+        # All failed - raise the last error
+        if last_error is not None:
+            raise last_error
+        msg = "No serializers configured"
+        raise SerializerError(msg)
 
     def _decompress(self, value: bytes) -> bytes:
         """Decompress a value, with fallback support for multiple compressors.
@@ -560,7 +608,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         """
 
         if isinstance(value, bool) or not isinstance(value, int):
-            value = self._serializer.dumps(value)
+            value = self._serializers[0].dumps(value)
             return self._compressors[0].compress(value)
 
         return value

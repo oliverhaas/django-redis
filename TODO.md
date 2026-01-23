@@ -33,16 +33,20 @@ Features and changes we want to make.
   - List-based COMPRESSOR config: `["path.to.ZstdCompressor", "path.to.GzipCompressor"]`
   - First compressor used for writing, all tried for reading
   - Exception-based fallback: tries each compressor until one succeeds
-  - Same pattern could be added for serializers later (e.g., migrate from pickle to msgpack)
+- [x] Multiple serializer fallback for backwards compatibility on read
+  - List-based SERIALIZER config: `["path.to.JSONSerializer", "path.to.PickleSerializer"]`
+  - First serializer used for writing, all tried for reading
+  - Exception-based fallback: tries each serializer until one succeeds
 - [x] Conditional compression based on value size
   - `BaseCompressor.min_length = 256` - values below this size are not compressed
   - Subclasses can override if needed
 - [ ] Consider removing IdentityCompressor
   - `_decompress()` already returns raw value when all compressors fail
   - May still be useful as explicit "no compression" config option
-- [ ] Benchmarks for compression/serialization overhead
-  - Measure latency impact of different compressors
-  - Compare serializer performance (pickle vs msgpack vs json)
+- [x] Benchmarks for compression/serialization overhead
+  - Compression exception handling: ~0.5µs (vs ~0.06µs for magic byte check)
+  - Serialization: pickle ~0.28µs, JSON ~1.03µs, exception overhead ~60% for JSON
+  - Conclusion: exception-based fallback is fast enough, simpler code wins
 
 ## Client Architecture
 

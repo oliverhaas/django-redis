@@ -2,6 +2,7 @@ from typing import Any
 
 import msgpack
 
+from django_redis.exceptions import SerializerError
 from django_redis.serializers.base import BaseSerializer
 
 
@@ -10,4 +11,7 @@ class MSGPackSerializer(BaseSerializer):
         return msgpack.dumps(value)
 
     def loads(self, value: bytes) -> Any:
-        return msgpack.loads(value, raw=False)
+        try:
+            return msgpack.loads(value, raw=False)
+        except Exception as e:
+            raise SerializerError from e
