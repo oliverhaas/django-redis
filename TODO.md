@@ -32,15 +32,13 @@ Features and changes we want to make.
 - [x] Multiple compressor fallback for backwards compatibility on read
   - List-based COMPRESSOR config: `["path.to.ZstdCompressor", "path.to.GzipCompressor", None]`
   - First compressor used for writing, all tried for reading
-  - Magic byte detection enabled by default for efficient format identification
+  - Exception-based fallback: tries each compressor until one succeeds
   - Same pattern could be added for serializers later (e.g., migrate from pickle to msgpack)
-- [ ] Conditional compression based on value size
-  - Only compress values above a threshold (e.g., 1KB)
-  - With fallback list like `["zstd", None]`, reading works reliably
-  - Alternative: detect compression by inspecting value (magic bytes, length heuristics)
+- [x] Conditional compression based on value size
+  - `BaseCompressor.min_length = 256` - values below this size are not compressed
+  - Subclasses can override if needed
 - [ ] Benchmarks for compression/serialization overhead
   - Measure latency impact of different compressors
-  - Find optimal threshold for conditional compression
   - Compare serializer performance (pickle vs msgpack vs json)
 
 ## Client Architecture
