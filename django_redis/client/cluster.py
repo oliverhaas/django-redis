@@ -24,7 +24,7 @@ class ClusterClient(DefaultClient):
     different slots by grouping them appropriately.
     """
 
-    _clients: list[RedisCluster | None]  # type: ignore[assignment]
+    _clients: list[RedisCluster | None]
 
     def __init__(self, server, params: dict[str, Any], backend: BaseCache) -> None:
         super().__init__(server, params, backend)

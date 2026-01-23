@@ -11,6 +11,7 @@ from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache, get_key_
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 from redis import Redis
+from redis.cluster import RedisCluster
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from redis.exceptions import TimeoutError as RedisTimeoutError
@@ -20,6 +21,9 @@ from django_redis import pool
 from django_redis.client.mixins import HashMixin, ListMixin, SetMixin, SortedSetMixin
 from django_redis.exceptions import CompressorError, ConnectionInterrupted
 from django_redis.util import CacheKey
+
+# Type alias for Redis client (standalone or cluster)
+RedisClient = Redis | RedisCluster
 
 _main_exceptions = (
     RedisConnectionError,
@@ -52,7 +56,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         if not isinstance(self._server, list | tuple | set):
             self._server = self._server.split(",")
 
-        self._clients: list[Redis | None] = [None] * len(self._server)
+        self._clients: list[RedisClient | None] = [None] * len(self._server)
         self._options = params.get("OPTIONS", {})
         self._replica_read_only = self._options.get("REPLICA_READ_ONLY", True)
 
