@@ -85,6 +85,10 @@ Features and changes we want to make.
   - Still disabled due to redis-py: arg-type (key types), assignment (Redis/RedisCluster), type-var (zadd)
   - mypy now passes with 0 errors
 - [ ] Clean up config as changes are made
+- [ ] Consider removing CacheKey
+  - Marker class to prevent double-prefixing in `make_key()`
+  - `make_key()` is only called internally, so double-prefixing shouldn't happen
+  - May be unnecessary defensive programming
 
 ## Tooling/Infrastructure
 
