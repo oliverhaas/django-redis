@@ -1,7 +1,7 @@
 """Redis Cluster client for django-redis."""
 
 from collections import OrderedDict, defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache
@@ -208,5 +208,93 @@ class ClusterClient(DefaultClient):
             # RedisCluster.flushdb() with target_nodes=ALL_PRIMARIES
             # flushes all primary nodes
             client.flushdb(target_nodes=RedisCluster.PRIMARIES)
+        except Exception as e:
+            raise ConnectionInterrupted(connection=client) from e
+
+    def keys(
+        self,
+        search: str,
+        version: int | None = None,
+        client: RedisCluster | None = None,  # type: ignore[override]
+    ) -> list[Any]:
+        """
+        Execute KEYS command across all primary nodes.
+
+        In cluster mode, KEYS only operates on the connected node.
+        This method queries all primary nodes in the cluster.
+        """
+        if client is None:
+            client = self.get_client(write=False)
+
+        pattern = self.make_pattern(search, version=version)
+        try:
+            return [self.reverse_key(k.decode()) for k in client.keys(pattern, target_nodes=RedisCluster.PRIMARIES)]
+        except Exception as e:
+            raise ConnectionInterrupted(connection=client) from e
+
+    def iter_keys(
+        self,
+        search: str,
+        itersize: int | None = None,
+        client: RedisCluster | None = None,  # type: ignore[override]
+        version: int | None = None,
+    ) -> Iterator[str]:
+        """
+        Iterate keys matching pattern across all primary nodes.
+
+        In cluster mode, SCAN only operates on the connected node.
+        This method scans all primary nodes in the cluster.
+        """
+        if client is None:
+            client = self.get_client(write=False)
+
+        pattern = self.make_pattern(search, version=version)
+        for item in client.scan_iter(
+            match=pattern,
+            count=itersize,
+            target_nodes=RedisCluster.PRIMARIES,
+        ):
+            yield self.reverse_key(item.decode())
+
+    def delete_pattern(
+        self,
+        pattern: str,
+        version: int | None = None,
+        prefix: str | None = None,
+        client: RedisCluster | None = None,  # type: ignore[override]
+        itersize: int | None = None,
+    ) -> int:
+        """
+        Remove all keys matching pattern across all primary nodes.
+
+        In cluster mode, SCAN only operates on the connected node.
+        This method scans all primary nodes and groups deletions by slot.
+        """
+        if client is None:
+            client = self.get_client(write=True)
+
+        pattern = self.make_pattern(pattern, version=version, prefix=prefix)
+
+        try:
+            # Collect all matching keys from all primaries
+            keys = list(
+                client.scan_iter(
+                    match=pattern,
+                    count=itersize,
+                    target_nodes=RedisCluster.PRIMARIES,
+                ),
+            )
+
+            if not keys:
+                return 0
+
+            # Group keys by slot for efficient deletion
+            slots = self._group_keys_by_slot(keys)
+
+            total_deleted = 0
+            for slot_keys in slots.values():
+                total_deleted += client.delete(*slot_keys)
+
+            return total_deleted
         except Exception as e:
             raise ConnectionInterrupted(connection=client) from e

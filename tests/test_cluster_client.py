@@ -472,3 +472,250 @@ class TestClusterClient:
 
         # Should call flushdb with target_nodes=PRIMARIES
         mock_cluster.flushdb.assert_called_once_with(target_nodes=RedisCluster.PRIMARIES)
+
+    @patch("django_redis.pool.get_connection_factory")
+    def test_keys_scans_all_primaries(self, mock_get_factory):
+        """Test keys() returns keys from all primary nodes."""
+        from redis.cluster import RedisCluster
+
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = "prefix"
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        # Mock keys() to return keys from across the cluster
+        mock_cluster.keys.return_value = [
+            b"prefix:1:foo_1",
+            b"prefix:1:foo_2",
+            b"prefix:1:foo_3",
+        ]
+
+        result = client.keys("foo_*")
+
+        # Should call keys with target_nodes=PRIMARIES
+        mock_cluster.keys.assert_called_once()
+        call_kwargs = mock_cluster.keys.call_args.kwargs
+        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+
+        # Should return decoded keys
+        assert len(result) == 3
+        assert "foo_1" in result
+        assert "foo_2" in result
+        assert "foo_3" in result
+
+    @patch("django_redis.pool.get_connection_factory")
+    def test_keys_empty_result(self, mock_get_factory):
+        """Test keys() with no matching keys."""
+
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = ""
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: k
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        mock_cluster.keys.return_value = []
+
+        result = client.keys("nonexistent_*")
+
+        assert result == []
+        mock_cluster.keys.assert_called_once()
+
+    @patch("django_redis.pool.get_connection_factory")
+    def test_iter_keys_scans_all_primaries(self, mock_get_factory):
+        """Test iter_keys() iterates keys from all primary nodes."""
+        from redis.cluster import RedisCluster
+
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = "prefix"
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        # Mock scan_iter to return keys from across the cluster
+        mock_cluster.scan_iter.return_value = iter(
+            [
+                b"prefix:1:bar_1",
+                b"prefix:1:bar_2",
+                b"prefix:1:bar_3",
+            ],
+        )
+
+        result = list(client.iter_keys("bar_*"))
+
+        # Should call scan_iter with target_nodes=PRIMARIES
+        mock_cluster.scan_iter.assert_called_once()
+        call_kwargs = mock_cluster.scan_iter.call_args.kwargs
+        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+
+        # Should return decoded keys
+        assert len(result) == 3
+        assert "bar_1" in result
+        assert "bar_2" in result
+        assert "bar_3" in result
+
+    @patch("django_redis.pool.get_connection_factory")
+    def test_iter_keys_with_itersize(self, mock_get_factory):
+        """Test iter_keys() passes itersize to scan_iter."""
+        from redis.cluster import RedisCluster
+
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = ""
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: k
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        mock_cluster.scan_iter.return_value = iter([])
+
+        list(client.iter_keys("*", itersize=500))
+
+        call_kwargs = mock_cluster.scan_iter.call_args.kwargs
+        assert call_kwargs.get("count") == 500
+        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+
+    @patch("django_redis.pool.get_connection_factory")
+    def test_delete_pattern_deletes_across_primaries(self, mock_get_factory):
+        """Test delete_pattern() deletes keys from all primary nodes."""
+        from redis.cluster import RedisCluster
+
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = "prefix"
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        # Mock scan_iter to return keys
+        mock_cluster.scan_iter.return_value = iter(
+            [
+                b"prefix:1:temp_1",
+                b"prefix:1:temp_2",
+                b"prefix:1:temp_3",
+            ],
+        )
+        mock_cluster.delete.return_value = 1
+
+        result = client.delete_pattern("temp_*")
+
+        # Should scan with target_nodes=PRIMARIES
+        mock_cluster.scan_iter.assert_called_once()
+        call_kwargs = mock_cluster.scan_iter.call_args.kwargs
+        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+
+        # Should delete 3 keys (called once per slot group, but we'll verify total)
+        assert result == 3
+
+    @patch("django_redis.pool.get_connection_factory")
+    def test_delete_pattern_empty_result(self, mock_get_factory):
+        """Test delete_pattern() with no matching keys."""
+
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = ""
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: k
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        mock_cluster.scan_iter.return_value = iter([])
+
+        result = client.delete_pattern("nonexistent_*")
+
+        assert result == 0
+        # delete should not be called if no keys found
+        mock_cluster.delete.assert_not_called()
+
+    @patch("django_redis.pool.get_connection_factory")
+    def test_delete_pattern_groups_by_slot(self, mock_get_factory):
+        """Test delete_pattern() groups keys by slot for deletion."""
+
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = ""
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: k
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        # Keys with different hash tags go to different slots
+        # {a} -> slot 15495, {b} -> slot 3300
+        mock_cluster.scan_iter.return_value = iter(
+            [
+                b"{a}key1",
+                b"{a}key2",
+                b"{b}key3",
+            ],
+        )
+        mock_cluster.delete.return_value = 2  # First call deletes 2 keys
+        mock_cluster.delete.side_effect = [2, 1]  # 2 keys in slot a, 1 in slot b
+
+        result = client.delete_pattern("*")
+
+        # Should call delete twice (once per slot)
+        assert mock_cluster.delete.call_count == 2
+        assert result == 3  # 2 + 1 = 3 total deleted
