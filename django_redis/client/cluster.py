@@ -2,7 +2,7 @@
 
 from collections import OrderedDict, defaultdict
 from collections.abc import Iterable, Iterator
-from typing import Any
+from typing import Any, cast
 
 from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache
 from redis.cluster import RedisCluster, key_slot
@@ -121,11 +121,11 @@ class ClusterClient(DefaultClient):
             for slot_keys in slots.values():
                 if len(slot_keys) == 1:
                     # Single key - use GET
-                    value = client.get(slot_keys[0])
+                    value = cast("bytes | None", client.get(slot_keys[0]))
                     all_results[slot_keys[0]] = value
                 else:
                     # Multiple keys in same slot - use MGET
-                    results = client.mget(*slot_keys)
+                    results = cast("list[bytes | None]", client.mget(*slot_keys))
                     for key, value in zip(slot_keys, results, strict=False):
                         all_results[key] = value
 
@@ -167,7 +167,7 @@ class ClusterClient(DefaultClient):
         try:
             total_deleted = 0
             for slot_keys in slots.values():
-                total_deleted += client.delete(*slot_keys)
+                total_deleted += cast("int", client.delete(*slot_keys))
             return total_deleted
         except Exception as e:
             raise ConnectionInterrupted(connection=client) from e
@@ -228,7 +228,8 @@ class ClusterClient(DefaultClient):
 
         pattern = self.make_pattern(search, version=version)
         try:
-            return [self.reverse_key(k.decode()) for k in client.keys(pattern, target_nodes=RedisCluster.PRIMARIES)]
+            keys_result = cast("list[bytes]", client.keys(pattern, target_nodes=RedisCluster.PRIMARIES))
+            return [self.reverse_key(k.decode()) for k in keys_result]
         except Exception as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -293,7 +294,7 @@ class ClusterClient(DefaultClient):
 
             total_deleted = 0
             for slot_keys in slots.values():
-                total_deleted += client.delete(*slot_keys)
+                total_deleted += cast("int", client.delete(*slot_keys))
 
             return total_deleted
         except Exception as e:

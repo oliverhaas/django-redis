@@ -24,7 +24,7 @@ class SetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_values = [self.encode(value) for value in values]
-        return int(client.sadd(nkey, *encoded_values))
+        return cast("int", client.sadd(nkey, *encoded_values))
 
     def scard(
         self,
@@ -37,7 +37,7 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        return int(client.scard(nkey))
+        return cast("int", client.scard(nkey))
 
     def sdiff(
         self,
@@ -50,7 +50,8 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkeys = [self.make_key(key, version=version) for key in keys]
-        return {self.decode(value) for value in client.sdiff(*nkeys)}
+        result = cast("builtins.set[bytes]", client.sdiff(*nkeys))
+        return {self.decode(value) for value in result}
 
     def sdiffstore(
         self,
@@ -66,7 +67,7 @@ class SetMixin(ClientProtocol):
 
         ndest = self.make_key(dest, version=version_dest)
         nkeys = [self.make_key(key, version=version_keys) for key in keys]
-        return int(client.sdiffstore(ndest, *nkeys))
+        return cast("int", client.sdiffstore(ndest, *nkeys))
 
     def sinter(
         self,
@@ -79,7 +80,8 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkeys = [self.make_key(key, version=version) for key in keys]
-        return {self.decode(value) for value in client.sinter(*nkeys)}
+        result = cast("builtins.set[bytes]", client.sinter(*nkeys))
+        return {self.decode(value) for value in result}
 
     def sinterstore(
         self,
@@ -94,7 +96,7 @@ class SetMixin(ClientProtocol):
 
         ndest = self.make_key(dest, version=version)
         nkeys = [self.make_key(key, version=version) for key in keys]
-        return int(client.sinterstore(ndest, *nkeys))
+        return cast("int", client.sinterstore(ndest, *nkeys))
 
     def smismember(
         self,
@@ -109,7 +111,8 @@ class SetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_members = [self.encode(member) for member in members]
-        return [bool(value) for value in client.smismember(nkey, *encoded_members)]
+        result = cast("list[int]", client.smismember(nkey, *encoded_members))
+        return [bool(value) for value in result]
 
     def sismember(
         self,
@@ -124,7 +127,7 @@ class SetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         nmember = self.encode(member)
-        return bool(client.sismember(nkey, nmember))
+        return cast("bool", client.sismember(nkey, nmember))
 
     def smembers(
         self,
@@ -137,7 +140,8 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        return {self.decode(value) for value in client.smembers(nkey)}
+        result = cast("builtins.set[bytes]", client.smembers(nkey))
+        return {self.decode(value) for value in result}
 
     def smove(
         self,
@@ -154,7 +158,7 @@ class SetMixin(ClientProtocol):
         nsource = self.make_key(source, version=version)
         ndestination = self.make_key(destination, version=version)
         nmember = self.encode(member)
-        return bool(client.smove(nsource, ndestination, nmember))
+        return cast("bool", client.smove(nsource, ndestination, nmember))
 
     def spop(
         self,
@@ -168,7 +172,7 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        result = client.spop(nkey, count)
+        result = cast("list[bytes] | bytes | None", client.spop(nkey, count))
         return self._decode_iterable_result(result)
 
     def srandmember(
@@ -183,7 +187,7 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        result = client.srandmember(nkey, count)
+        result = cast("list[bytes] | bytes | None", client.srandmember(nkey, count))
         return self._decode_iterable_result(result, convert_to_set=False)
 
     def srem(
@@ -199,7 +203,7 @@ class SetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         nmembers = [self.encode(member) for member in members]
-        return int(client.srem(nkey, *nmembers))
+        return cast("int", client.srem(nkey, *nmembers))
 
     def sscan(
         self,
@@ -218,10 +222,13 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        cursor, result = client.sscan(
-            nkey,
-            match=cast("PatternT", self.encode(match)) if match else None,
-            count=count,
+        cursor, result = cast(
+            "tuple[int, list[bytes]]",
+            client.sscan(
+                nkey,
+                match=cast("PatternT", self.encode(match)) if match else None,
+                count=count,
+            ),
         )
         return {self.decode(value) for value in result}
 
@@ -260,7 +267,8 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkeys = [self.make_key(key, version=version) for key in keys]
-        return {self.decode(value) for value in client.sunion(*nkeys)}
+        result = cast("builtins.set[bytes]", client.sunion(*nkeys))
+        return {self.decode(value) for value in result}
 
     def sunionstore(
         self,
@@ -275,4 +283,4 @@ class SetMixin(ClientProtocol):
 
         ndestination = self.make_key(destination, version=version)
         nkeys = [self.make_key(key, version=version) for key in keys]
-        return int(client.sunionstore(ndestination, *nkeys))
+        return cast("int", client.sunionstore(ndestination, *nkeys))

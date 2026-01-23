@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from redis import Redis
 from redis.exceptions import ConnectionError as RedisConnectionError
@@ -35,7 +35,7 @@ class HashMixin(ClientProtocol):
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
         nvalue = self.encode(value)
-        return int(client.hset(nkey, field, nvalue))
+        return cast("int", client.hset(nkey, field, nvalue))
 
     def hdel(
         self,
@@ -51,7 +51,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
-        return int(client.hdel(nkey, field))
+        return cast("int", client.hdel(nkey, field))
 
     def hlen(
         self,
@@ -63,7 +63,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
-        return int(client.hlen(nkey))
+        return cast("int", client.hlen(nkey))
 
     def hkeys(
         self,
@@ -76,7 +76,7 @@ class HashMixin(ClientProtocol):
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
         try:
-            return [k.decode() for k in client.hkeys(nkey)]
+            return [k.decode() for k in cast("list[bytes]", client.hkeys(nkey))]
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -91,7 +91,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
-        return bool(client.hexists(nkey, field))
+        return cast("bool", client.hexists(nkey, field))
 
     def hget(
         self,
@@ -104,7 +104,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
-        value = client.hget(nkey, field)
+        value = cast("bytes | None", client.hget(nkey, field))
         if value is None:
             return None
         return self.decode(value)
@@ -119,7 +119,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
-        result = client.hgetall(nkey)
+        result = cast("dict[bytes, bytes]", client.hgetall(nkey))
         return {k.decode(): self.decode(v) for k, v in result.items()}
 
     def hmget(
@@ -133,7 +133,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
-        values = client.hmget(nkey, fields)
+        values = cast("list[bytes | None]", client.hmget(nkey, fields))
         return [self.decode(v) if v is not None else None for v in values]
 
     def hmset(
@@ -148,7 +148,7 @@ class HashMixin(ClientProtocol):
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
         encoded_mapping = {field: self.encode(value) for field, value in mapping.items()}
-        return bool(client.hset(nkey, mapping=encoded_mapping))
+        return cast("bool", client.hset(nkey, mapping=encoded_mapping))
 
     def hincrby(
         self,
@@ -162,7 +162,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
-        return int(client.hincrby(nkey, field, amount))
+        return cast("int", client.hincrby(nkey, field, amount))
 
     def hincrbyfloat(
         self,
@@ -176,7 +176,7 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
-        return float(client.hincrbyfloat(nkey, field, amount))
+        return cast("float", client.hincrbyfloat(nkey, field, amount))
 
     def hsetnx(
         self,
@@ -191,7 +191,7 @@ class HashMixin(ClientProtocol):
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
         nvalue = self.encode(value)
-        return bool(client.hsetnx(nkey, field, nvalue))
+        return cast("bool", client.hsetnx(nkey, field, nvalue))
 
     def hvals(
         self,
@@ -203,5 +203,5 @@ class HashMixin(ClientProtocol):
         if client is None:
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
-        values = client.hvals(nkey)
+        values = cast("list[bytes]", client.hvals(nkey))
         return [self.decode(v) for v in values]

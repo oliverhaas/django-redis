@@ -75,7 +75,7 @@ class TestDeletePatternOperations:
 
         cache.delete_pattern("*foo-a*", itersize=2)
 
-        client_mock.delete_pattern.assert_called_once_with("*foo-a*", itersize=2)
+        client_mock.delete_pattern.assert_called_once_with("*foo-a*", version=None, itersize=2)
 
     @patch("django_redis.cache.RedisCache.client")
     def test_delete_pattern_with_settings_default_scan_count(
@@ -93,6 +93,7 @@ class TestDeletePatternOperations:
 
         client_mock.delete_pattern.assert_called_once_with(
             "*foo-a*",
+            version=None,
             itersize=expected_count,
         )
 

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from redis import Redis
 from redis.typing import KeyT
@@ -22,7 +22,7 @@ class ListMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_values = [self.encode(value) for value in values]
-        return int(client.lpush(nkey, *encoded_values))
+        return cast("int", client.lpush(nkey, *encoded_values))
 
     def rpush(
         self,
@@ -37,7 +37,7 @@ class ListMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_values = [self.encode(value) for value in values]
-        return int(client.rpush(nkey, *encoded_values))
+        return cast("int", client.rpush(nkey, *encoded_values))
 
     def lpop(
         self,
@@ -51,7 +51,7 @@ class ListMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        result = client.lpop(nkey, count=count)
+        result = cast("bytes | list[bytes] | None", client.lpop(nkey, count=count))
 
         if result is None:
             return None
@@ -71,7 +71,7 @@ class ListMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        result = client.rpop(nkey, count=count)
+        result = cast("bytes | list[bytes] | None", client.rpop(nkey, count=count))
 
         if result is None:
             return None
@@ -92,7 +92,7 @@ class ListMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        result = client.lrange(nkey, start, end)
+        result = cast("list[bytes]", client.lrange(nkey, start, end))
         return [self.decode(item) for item in result]
 
     def lindex(
@@ -107,7 +107,7 @@ class ListMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        result = client.lindex(nkey, index)
+        result = cast("bytes | None", client.lindex(nkey, index))
         if result is None:
             return None
         return self.decode(result)
@@ -123,7 +123,7 @@ class ListMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        return int(client.llen(nkey))
+        return cast("int", client.llen(nkey))
 
     def lrem(
         self,
@@ -144,7 +144,7 @@ class ListMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_value = self.encode(value)
-        return int(client.lrem(nkey, count, encoded_value))
+        return cast("int", client.lrem(nkey, count, encoded_value))
 
     def ltrim(
         self,
@@ -159,7 +159,7 @@ class ListMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        return bool(client.ltrim(nkey, start, end))
+        return cast("bool", client.ltrim(nkey, start, end))
 
     def lset(
         self,
@@ -175,7 +175,7 @@ class ListMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_value = self.encode(value)
-        return bool(client.lset(nkey, index, encoded_value))
+        return cast("bool", client.lset(nkey, index, encoded_value))
 
     def linsert(
         self,
@@ -202,7 +202,7 @@ class ListMixin(ClientProtocol):
         nkey = self.make_key(key, version=version)
         encoded_pivot = self.encode(pivot)
         encoded_value = self.encode(value)
-        return int(client.linsert(nkey, where, encoded_pivot, encoded_value))
+        return cast("int", client.linsert(nkey, where, encoded_pivot, encoded_value))
 
     def lpos(
         self,
@@ -230,7 +230,10 @@ class ListMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_value = self.encode(value)
-        return client.lpos(nkey, encoded_value, rank=rank, count=count, maxlen=maxlen)
+        return cast(
+            "int | list[int] | None",
+            client.lpos(nkey, encoded_value, rank=rank, count=count, maxlen=maxlen),
+        )
 
     def lmove(
         self,
@@ -257,7 +260,7 @@ class ListMixin(ClientProtocol):
 
         nsrc = self.make_key(source, version=version)
         ndst = self.make_key(destination, version=version)
-        result = client.lmove(nsrc, ndst, src_direction, dest_direction)
+        result = cast("bytes | None", client.lmove(nsrc, ndst, src_direction, dest_direction))
         if result is None:
             return None
         return self.decode(result)

@@ -63,7 +63,7 @@ class TestBasicCacheOperations:
         assert res == "heló"
 
     def test_save_dict(self, cache: RedisCache):
-        if isinstance(cache.client._serializer, JSONSerializer | MSGPackSerializer):
+        if isinstance(cache.client._serializers[0], JSONSerializer | MSGPackSerializer):
             # JSONSerializer and MSGPackSerializer use the isoformat for
             # datetimes.
             now_dt: str | datetime.datetime = datetime.datetime.now().isoformat()

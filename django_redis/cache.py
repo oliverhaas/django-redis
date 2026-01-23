@@ -1,14 +1,22 @@
+from __future__ import annotations
+
 import functools
 import logging
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from django import VERSION as DJANGO_VERSION
+
+if TYPE_CHECKING:
+    import builtins
+    from collections.abc import Callable, Iterator, Mapping
 from django.conf import settings
-from django.core.cache.backends.base import BaseCache
+from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache
 from django.utils.module_loading import import_string
 
 from django_redis.exceptions import ConnectionInterrupted
+
+# Type alias matching Django's cache interface
+_DEFAULT_TIMEOUT: Any = DEFAULT_TIMEOUT  # Sentinel type
 
 CONNECTION_INTERRUPTED = object()
 
@@ -83,353 +91,485 @@ class RedisCache(BaseCache):
             self._client = self._client_cls(self._server, self._params, self)
         return self._client
 
-    @omit_exception
-    def set(self, *args, **kwargs):
-        return self.client.set(*args, **kwargs)
+    # =========================================================================
+    # Django Cache Interface Methods (fully typed)
+    # =========================================================================
 
     @omit_exception
-    def incr_version(self, *args, **kwargs):
-        return self.client.incr_version(*args, **kwargs)
+    def set(
+        self,
+        key: str,
+        value: Any,
+        timeout: float | None = _DEFAULT_TIMEOUT,
+        version: int | None = None,
+        client: Any | None = None,
+        nx: bool = False,
+        xx: bool = False,
+    ) -> bool:
+        return self.client.set(
+            key,
+            value,
+            timeout=timeout,
+            version=version,
+            client=client,
+            nx=nx,
+            xx=xx,
+        )
 
     @omit_exception
-    def add(self, *args, **kwargs):
-        return self.client.add(*args, **kwargs)
+    def incr_version(
+        self,
+        key: str,
+        delta: int = 1,
+        version: int | None = None,
+    ) -> int:
+        return self.client.incr_version(key, delta=delta, version=version)
 
-    def get(self, key, default=None, version=None, client=None):
+    @omit_exception
+    def add(
+        self,
+        key: str,
+        value: Any,
+        timeout: float | None = _DEFAULT_TIMEOUT,
+        version: int | None = None,
+    ) -> bool:
+        return self.client.add(key, value, timeout=timeout, version=version)
+
+    def get(
+        self,
+        key: str,
+        default: Any | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Any:
         value = self._get(key, default, version, client)
         if value is CONNECTION_INTERRUPTED:
             value = default
         return value
 
     @omit_exception(return_value=CONNECTION_INTERRUPTED)
-    def _get(self, key, default, version, client):
+    def _get(
+        self,
+        key: str,
+        default: Any | None,
+        version: int | None,
+        client: Any | None,
+    ) -> Any:
         return self.client.get(key, default=default, version=version, client=client)
 
     @omit_exception
-    def delete(self, *args, **kwargs):
-        """returns a boolean instead of int since django version 3.1"""
-        result = self.client.delete(*args, **kwargs)
+    def delete(self, key: str, version: int | None = None) -> bool:
+        """Returns a boolean instead of int since django version 3.1."""
+        result = self.client.delete(key, version=version)
         return bool(result) if DJANGO_VERSION >= (3, 1, 0) else result
 
     @omit_exception
-    def delete_pattern(self, *args, **kwargs):
-        kwargs.setdefault("itersize", self._default_scan_itersize)
-        return self.client.delete_pattern(*args, **kwargs)
+    def delete_pattern(
+        self,
+        pattern: str,
+        version: int | None = None,
+        itersize: int | None = None,
+    ) -> int:
+        if itersize is None:
+            itersize = self._default_scan_itersize
+        return self.client.delete_pattern(pattern, version=version, itersize=itersize)
 
     @omit_exception
-    def delete_many(self, *args, **kwargs):
-        return self.client.delete_many(*args, **kwargs)
+    def delete_many(self, keys: list[str], version: int | None = None) -> None:
+        return self.client.delete_many(keys, version=version)
 
     @omit_exception
-    def clear(self):
+    def clear(self) -> bool:
         return self.client.clear()
 
     @omit_exception(return_value={})
-    def get_many(self, *args, **kwargs):
-        return self.client.get_many(*args, **kwargs)
+    def get_many(
+        self,
+        keys: list[str],
+        version: int | None = None,
+    ) -> dict[str, Any]:
+        return self.client.get_many(keys, version=version)
 
     @omit_exception
-    def set_many(self, *args, **kwargs):
-        return self.client.set_many(*args, **kwargs)
+    def set_many(
+        self,
+        data: Mapping[str, Any],
+        timeout: float | None = _DEFAULT_TIMEOUT,
+        version: int | None = None,
+    ) -> list[str]:
+        return self.client.set_many(data, timeout=timeout, version=version)
 
     @omit_exception
-    def incr(self, *args, **kwargs):
-        return self.client.incr(*args, **kwargs)
+    def incr(
+        self,
+        key: str,
+        delta: int = 1,
+        version: int | None = None,
+        client: Any | None = None,
+        ignore_key_check: bool = False,
+    ) -> int:
+        return self.client.incr(
+            key,
+            delta=delta,
+            version=version,
+            client=client,
+            ignore_key_check=ignore_key_check,
+        )
 
     @omit_exception
-    def decr(self, *args, **kwargs):
-        return self.client.decr(*args, **kwargs)
+    def decr(
+        self,
+        key: str,
+        delta: int = 1,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.decr(key, delta=delta, version=version, client=client)
 
     @omit_exception
-    def has_key(self, *args, **kwargs):
-        return self.client.has_key(*args, **kwargs)
+    def has_key(self, key: str, version: int | None = None) -> bool:
+        return self.client.has_key(key, version=version)
 
     @omit_exception
-    def keys(self, *args, **kwargs):
-        return self.client.keys(*args, **kwargs)
+    def keys(
+        self,
+        pattern: str = "*",
+        version: int | None = None,
+    ) -> list[str]:
+        return self.client.keys(pattern, version=version)
 
     @omit_exception
-    def iter_keys(self, *args, **kwargs):
-        return self.client.iter_keys(*args, **kwargs)
+    def iter_keys(
+        self,
+        pattern: str = "*",
+        version: int | None = None,
+        itersize: int | None = None,
+    ) -> Iterator[str]:
+        return self.client.iter_keys(pattern, version=version, itersize=itersize)
 
     @omit_exception
-    def ttl(self, *args, **kwargs):
-        return self.client.ttl(*args, **kwargs)
+    def ttl(self, key: str, version: int | None = None) -> int | None:
+        return self.client.ttl(key, version=version)
 
     @omit_exception
-    def pttl(self, *args, **kwargs):
-        return self.client.pttl(*args, **kwargs)
+    def pttl(self, key: str, version: int | None = None) -> int | None:
+        return self.client.pttl(key, version=version)
 
     @omit_exception
-    def persist(self, *args, **kwargs):
-        return self.client.persist(*args, **kwargs)
+    def persist(self, key: str, version: int | None = None) -> bool:
+        return self.client.persist(key, version=version)
 
     @omit_exception
-    def expire(self, *args, **kwargs):
-        return self.client.expire(*args, **kwargs)
+    def expire(
+        self,
+        key: str,
+        timeout: float,
+        version: int | None = None,
+    ) -> bool:
+        return self.client.expire(key, timeout, version=version)
 
     @omit_exception
-    def expire_at(self, *args, **kwargs):
-        return self.client.expire_at(*args, **kwargs)
+    def expire_at(
+        self,
+        key: str,
+        when: Any,
+        version: int | None = None,
+    ) -> bool:
+        return self.client.expire_at(key, when, version=version)
 
     @omit_exception
-    def pexpire(self, *args, **kwargs):
-        return self.client.pexpire(*args, **kwargs)
+    def pexpire(
+        self,
+        key: str,
+        timeout: int,
+        version: int | None = None,
+    ) -> bool:
+        return self.client.pexpire(key, timeout, version=version)
 
     @omit_exception
-    def pexpire_at(self, *args, **kwargs):
-        return self.client.pexpire_at(*args, **kwargs)
+    def pexpire_at(
+        self,
+        key: str,
+        when: Any,
+        version: int | None = None,
+    ) -> bool:
+        return self.client.pexpire_at(key, when, version=version)
 
     @omit_exception
-    def lock(self, *args, **kwargs):
-        return self.client.lock(*args, **kwargs)
+    def lock(
+        self,
+        key: str,
+        version: int | None = None,
+        timeout: float | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        return self.client.lock(key, version=version, timeout=timeout, **kwargs)
 
     @omit_exception
-    def close(self, **kwargs):
+    def close(self, **kwargs: Any) -> None:
         self.client.close(**kwargs)
 
     @omit_exception
-    def touch(self, *args, **kwargs):
-        return self.client.touch(*args, **kwargs)
+    def touch(
+        self,
+        key: str,
+        timeout: float | None = _DEFAULT_TIMEOUT,
+        version: int | None = None,
+    ) -> bool:
+        return self.client.touch(key, timeout=timeout, version=version)
+
+    # =========================================================================
+    # Redis Set Operations (passthrough to mixin)
+    # =========================================================================
 
     @omit_exception
-    def sadd(self, *args, **kwargs):
+    def sadd(self, *args, **kwargs) -> int:
         return self.client.sadd(*args, **kwargs)
 
     @omit_exception
-    def scard(self, *args, **kwargs):
+    def scard(self, *args, **kwargs) -> int:
         return self.client.scard(*args, **kwargs)
 
     @omit_exception
-    def sdiff(self, *args, **kwargs):
+    def sdiff(self, *args, **kwargs) -> builtins.set[Any]:
         return self.client.sdiff(*args, **kwargs)
 
     @omit_exception
-    def sdiffstore(self, *args, **kwargs):
+    def sdiffstore(self, *args, **kwargs) -> int:
         return self.client.sdiffstore(*args, **kwargs)
 
     @omit_exception
-    def sinter(self, *args, **kwargs):
+    def sinter(self, *args, **kwargs) -> builtins.set[Any]:
         return self.client.sinter(*args, **kwargs)
 
     @omit_exception
-    def sinterstore(self, *args, **kwargs):
+    def sinterstore(self, *args, **kwargs) -> int:
         return self.client.sinterstore(*args, **kwargs)
 
     @omit_exception
-    def sismember(self, *args, **kwargs):
+    def sismember(self, *args, **kwargs) -> bool:
         return self.client.sismember(*args, **kwargs)
 
     @omit_exception
-    def smembers(self, *args, **kwargs):
+    def smembers(self, *args, **kwargs) -> builtins.set[Any]:
         return self.client.smembers(*args, **kwargs)
 
     @omit_exception
-    def smove(self, *args, **kwargs):
+    def smove(self, *args, **kwargs) -> bool:
         return self.client.smove(*args, **kwargs)
 
     @omit_exception
-    def spop(self, *args, **kwargs):
+    def spop(self, *args, **kwargs) -> Any:
         return self.client.spop(*args, **kwargs)
 
     @omit_exception
-    def srandmember(self, *args, **kwargs):
+    def srandmember(self, *args, **kwargs) -> Any:
         return self.client.srandmember(*args, **kwargs)
 
     @omit_exception
-    def srem(self, *args, **kwargs):
+    def srem(self, *args, **kwargs) -> int:
         return self.client.srem(*args, **kwargs)
 
     @omit_exception
-    def sscan(self, *args, **kwargs):
+    def sscan(self, *args, **kwargs) -> builtins.set[Any]:
         return self.client.sscan(*args, **kwargs)
 
     @omit_exception
-    def sscan_iter(self, *args, **kwargs):
+    def sscan_iter(self, *args, **kwargs) -> Iterator[Any]:
         return self.client.sscan_iter(*args, **kwargs)
 
     @omit_exception
-    def smismember(self, *args, **kwargs):
+    def smismember(self, *args, **kwargs) -> list[bool]:
         return self.client.smismember(*args, **kwargs)
 
     @omit_exception
-    def sunion(self, *args, **kwargs):
+    def sunion(self, *args, **kwargs) -> builtins.set[Any]:
         return self.client.sunion(*args, **kwargs)
 
     @omit_exception
-    def sunionstore(self, *args, **kwargs):
+    def sunionstore(self, *args, **kwargs) -> int:
         return self.client.sunionstore(*args, **kwargs)
 
+    # =========================================================================
+    # Redis Hash Operations (passthrough to mixin)
+    # =========================================================================
+
     @omit_exception
-    def hset(self, *args, **kwargs):
+    def hset(self, *args, **kwargs) -> int:
         return self.client.hset(*args, **kwargs)
 
     @omit_exception
-    def hdel(self, *args, **kwargs):
+    def hdel(self, *args, **kwargs) -> int:
         return self.client.hdel(*args, **kwargs)
 
     @omit_exception
-    def hlen(self, *args, **kwargs):
+    def hlen(self, *args, **kwargs) -> int:
         return self.client.hlen(*args, **kwargs)
 
     @omit_exception
-    def hkeys(self, *args, **kwargs):
+    def hkeys(self, *args, **kwargs) -> list[str]:
         return self.client.hkeys(*args, **kwargs)
 
     @omit_exception
-    def hexists(self, *args, **kwargs):
+    def hexists(self, *args, **kwargs) -> bool:
         return self.client.hexists(*args, **kwargs)
 
     @omit_exception
-    def hget(self, *args, **kwargs):
+    def hget(self, *args, **kwargs) -> Any | None:
         return self.client.hget(*args, **kwargs)
 
     @omit_exception
-    def hgetall(self, *args, **kwargs):
+    def hgetall(self, *args, **kwargs) -> dict[str, Any]:
         return self.client.hgetall(*args, **kwargs)
 
     @omit_exception
-    def hmget(self, *args, **kwargs):
+    def hmget(self, *args, **kwargs) -> list[Any | None]:
         return self.client.hmget(*args, **kwargs)
 
     @omit_exception
-    def hmset(self, *args, **kwargs):
+    def hmset(self, *args, **kwargs) -> bool:
         return self.client.hmset(*args, **kwargs)
 
     @omit_exception
-    def hincrby(self, *args, **kwargs):
+    def hincrby(self, *args, **kwargs) -> int:
         return self.client.hincrby(*args, **kwargs)
 
     @omit_exception
-    def hincrbyfloat(self, *args, **kwargs):
+    def hincrbyfloat(self, *args, **kwargs) -> float:
         return self.client.hincrbyfloat(*args, **kwargs)
 
     @omit_exception
-    def hsetnx(self, *args, **kwargs):
+    def hsetnx(self, *args, **kwargs) -> bool:
         return self.client.hsetnx(*args, **kwargs)
 
     @omit_exception
-    def hvals(self, *args, **kwargs):
+    def hvals(self, *args, **kwargs) -> list[Any]:
         return self.client.hvals(*args, **kwargs)
 
-    # Sorted Set Operations
+    # =========================================================================
+    # Redis Sorted Set Operations (passthrough to mixin)
+    # =========================================================================
+
     @omit_exception
-    def zadd(self, *args, **kwargs):
+    def zadd(self, *args, **kwargs) -> int | float | None:
         return self.client.zadd(*args, **kwargs)
 
     @omit_exception
-    def zcard(self, *args, **kwargs):
+    def zcard(self, *args, **kwargs) -> int:
         return self.client.zcard(*args, **kwargs)
 
     @omit_exception
-    def zcount(self, *args, **kwargs):
+    def zcount(self, *args, **kwargs) -> int:
         return self.client.zcount(*args, **kwargs)
 
     @omit_exception
-    def zincrby(self, *args, **kwargs):
+    def zincrby(self, *args, **kwargs) -> float:
         return self.client.zincrby(*args, **kwargs)
 
     @omit_exception
-    def zpopmax(self, *args, **kwargs):
+    def zpopmax(self, *args, **kwargs) -> list[tuple[Any, float]]:
         return self.client.zpopmax(*args, **kwargs)
 
     @omit_exception
-    def zpopmin(self, *args, **kwargs):
+    def zpopmin(self, *args, **kwargs) -> list[tuple[Any, float]]:
         return self.client.zpopmin(*args, **kwargs)
 
     @omit_exception
-    def zrange(self, *args, **kwargs):
+    def zrange(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
         return self.client.zrange(*args, **kwargs)
 
     @omit_exception
-    def zrangebyscore(self, *args, **kwargs):
+    def zrangebyscore(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
         return self.client.zrangebyscore(*args, **kwargs)
 
     @omit_exception
-    def zrank(self, *args, **kwargs):
+    def zrank(self, *args, **kwargs) -> int | None:
         return self.client.zrank(*args, **kwargs)
 
     @omit_exception
-    def zrem(self, *args, **kwargs):
+    def zrem(self, *args, **kwargs) -> int:
         return self.client.zrem(*args, **kwargs)
 
     @omit_exception
-    def zremrangebyscore(self, *args, **kwargs):
+    def zremrangebyscore(self, *args, **kwargs) -> int:
         return self.client.zremrangebyscore(*args, **kwargs)
 
     @omit_exception
-    def zrevrange(self, *args, **kwargs):
+    def zrevrange(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
         return self.client.zrevrange(*args, **kwargs)
 
     @omit_exception
-    def zrevrangebyscore(self, *args, **kwargs):
+    def zrevrangebyscore(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
         return self.client.zrevrangebyscore(*args, **kwargs)
 
     @omit_exception
-    def zscore(self, *args, **kwargs):
+    def zscore(self, *args, **kwargs) -> float | None:
         return self.client.zscore(*args, **kwargs)
 
     @omit_exception
-    def zrevrank(self, *args, **kwargs):
+    def zrevrank(self, *args, **kwargs) -> int | None:
         return self.client.zrevrank(*args, **kwargs)
 
     @omit_exception
-    def zmscore(self, *args, **kwargs):
+    def zmscore(self, *args, **kwargs) -> list[float | None]:
         return self.client.zmscore(*args, **kwargs)
 
     @omit_exception
-    def zremrangebyrank(self, *args, **kwargs):
+    def zremrangebyrank(self, *args, **kwargs) -> int:
         return self.client.zremrangebyrank(*args, **kwargs)
 
-    # List Operations
+    # =========================================================================
+    # Redis List Operations (passthrough to mixin)
+    # =========================================================================
+
     @omit_exception
-    def lpush(self, *args, **kwargs):
+    def lpush(self, *args, **kwargs) -> int:
         return self.client.lpush(*args, **kwargs)
 
     @omit_exception
-    def rpush(self, *args, **kwargs):
+    def rpush(self, *args, **kwargs) -> int:
         return self.client.rpush(*args, **kwargs)
 
     @omit_exception
-    def lpop(self, *args, **kwargs):
+    def lpop(self, *args, **kwargs) -> Any | list[Any] | None:
         return self.client.lpop(*args, **kwargs)
 
     @omit_exception
-    def rpop(self, *args, **kwargs):
+    def rpop(self, *args, **kwargs) -> Any | list[Any] | None:
         return self.client.rpop(*args, **kwargs)
 
     @omit_exception
-    def lrange(self, *args, **kwargs):
+    def lrange(self, *args, **kwargs) -> list[Any]:
         return self.client.lrange(*args, **kwargs)
 
     @omit_exception
-    def lindex(self, *args, **kwargs):
+    def lindex(self, *args, **kwargs) -> Any | None:
         return self.client.lindex(*args, **kwargs)
 
     @omit_exception
-    def llen(self, *args, **kwargs):
+    def llen(self, *args, **kwargs) -> int:
         return self.client.llen(*args, **kwargs)
 
     @omit_exception
-    def lrem(self, *args, **kwargs):
+    def lrem(self, *args, **kwargs) -> int:
         return self.client.lrem(*args, **kwargs)
 
     @omit_exception
-    def ltrim(self, *args, **kwargs):
+    def ltrim(self, *args, **kwargs) -> bool:
         return self.client.ltrim(*args, **kwargs)
 
     @omit_exception
-    def lset(self, *args, **kwargs):
+    def lset(self, *args, **kwargs) -> bool:
         return self.client.lset(*args, **kwargs)
 
     @omit_exception
-    def linsert(self, *args, **kwargs):
+    def linsert(self, *args, **kwargs) -> int:
         return self.client.linsert(*args, **kwargs)
 
     @omit_exception
-    def lpos(self, *args, **kwargs):
+    def lpos(self, *args, **kwargs) -> int | list[int] | None:
         return self.client.lpos(*args, **kwargs)
 
     @omit_exception
-    def lmove(self, *args, **kwargs):
+    def lmove(self, *args, **kwargs) -> Any | None:
         return self.client.lmove(*args, **kwargs)

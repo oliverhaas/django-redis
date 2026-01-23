@@ -140,17 +140,15 @@ pretty = true
 show_error_codes = true
 show_error_context = true
 warn_redundant_casts = true
-# Temporarily loosened - full type annotations on TODO list
 warn_unused_ignores = false
 warn_unreachable = false
+# These error codes are disabled due to redis-py type annotation issues.
+# See: https://github.com/redis/redis-py/issues/3497
+# See: https://github.com/redis/redis-py/issues/3107
 disable_error_code = [
-  "arg-type",
-  "union-attr",
-  "type-var",
-  "return-value",
-  "assignment",
-  "operator",
-  "misc",
+  "arg-type",   # redis-py expects str keys but we use KeyT (str | bytes | memoryview)
+  "assignment", # Redis vs RedisCluster type assignments in cluster client
+  "type-var",   # TypeVar issues with redis-py generics (e.g., zadd)
 ]
 
 [tool.django-stubs]

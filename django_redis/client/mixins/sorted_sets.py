@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from redis import Redis
 from redis.typing import KeyT
@@ -30,7 +30,8 @@ class SortedSetMixin(ClientProtocol):
         # Encode members but NOT scores (scores must remain as floats)
         encoded_mapping = {self.encode(member): score for member, score in mapping.items()}
 
-        return int(
+        return cast(
+            "int",
             client.zadd(
                 nkey,
                 encoded_mapping,  # type: ignore[arg-type]
@@ -54,7 +55,7 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        return int(client.zcard(nkey))
+        return cast("int", client.zcard(nkey))
 
     def zcount(
         self,
@@ -69,7 +70,7 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        return int(client.zcount(nkey, min, max))
+        return cast("int", client.zcount(nkey, min, max))
 
     def zincrby(
         self,
@@ -85,7 +86,7 @@ class SortedSetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         value = self.encode(value)
-        return float(client.zincrby(nkey, amount, value))
+        return cast("float", client.zincrby(nkey, amount, value))
 
     def zpopmax(
         self,
@@ -99,7 +100,7 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        result = client.zpopmax(nkey, count)
+        result = cast("list[tuple[bytes, float]]", client.zpopmax(nkey, count))
 
         if not result:
             return None if count is None else []
@@ -123,7 +124,7 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        result = client.zpopmin(nkey, count)
+        result = cast("list[tuple[bytes, float]]", client.zpopmin(nkey, count))
 
         if not result:
             return None if count is None else []
@@ -151,13 +152,16 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        result = client.zrange(
-            nkey,
-            start,
-            end,
-            desc=desc,
-            withscores=withscores,
-            score_cast_func=score_cast_func,
+        result = cast(
+            "list[Any]",
+            client.zrange(
+                nkey,
+                start,
+                end,
+                desc=desc,
+                withscores=withscores,
+                score_cast_func=score_cast_func,
+            ),
         )
 
         if withscores:
@@ -182,14 +186,17 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        result = client.zrangebyscore(
-            nkey,
-            min,
-            max,
-            start=start,
-            num=num,
-            withscores=withscores,
-            score_cast_func=score_cast_func,
+        result = cast(
+            "list[Any]",
+            client.zrangebyscore(
+                nkey,
+                min,
+                max,
+                start=start,
+                num=num,
+                withscores=withscores,
+                score_cast_func=score_cast_func,
+            ),
         )
 
         if withscores:
@@ -210,9 +217,7 @@ class SortedSetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         value = self.encode(value)
-        rank = client.zrank(nkey, value)
-
-        return int(rank) if rank is not None else None
+        return cast("int | None", client.zrank(nkey, value))
 
     def zrem(
         self,
@@ -227,7 +232,7 @@ class SortedSetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_values = [self.encode(value) for value in values]
-        return int(client.zrem(nkey, *encoded_values))
+        return cast("int", client.zrem(nkey, *encoded_values))
 
     def zremrangebyscore(
         self,
@@ -242,7 +247,7 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        return int(client.zremrangebyscore(nkey, min, max))
+        return cast("int", client.zremrangebyscore(nkey, min, max))
 
     def zrevrange(
         self,
@@ -259,12 +264,15 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        result = client.zrevrange(
-            nkey,
-            start,
-            end,
-            withscores=withscores,
-            score_cast_func=score_cast_func,
+        result = cast(
+            "list[Any]",
+            client.zrevrange(
+                nkey,
+                start,
+                end,
+                withscores=withscores,
+                score_cast_func=score_cast_func,
+            ),
         )
 
         if withscores:
@@ -289,14 +297,17 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        result = client.zrevrangebyscore(
-            nkey,
-            max,
-            min,
-            start=start,
-            num=num,
-            withscores=withscores,
-            score_cast_func=score_cast_func,
+        result = cast(
+            "list[Any]",
+            client.zrevrangebyscore(
+                nkey,
+                max,
+                min,
+                start=start,
+                num=num,
+                withscores=withscores,
+                score_cast_func=score_cast_func,
+            ),
         )
 
         if withscores:
@@ -317,9 +328,7 @@ class SortedSetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         value = self.encode(value)
-        score = client.zscore(nkey, value)
-
-        return float(score) if score is not None else None
+        return cast("float | None", client.zscore(nkey, value))
 
     def zrevrank(
         self,
@@ -334,9 +343,7 @@ class SortedSetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         value = self.encode(value)
-        rank = client.zrevrank(nkey, value)
-
-        return int(rank) if rank is not None else None
+        return cast("int | None", client.zrevrank(nkey, value))
 
     def zmscore(
         self,
@@ -351,9 +358,7 @@ class SortedSetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         encoded_members = [self.encode(member) for member in members]
-        scores = client.zmscore(nkey, encoded_members)
-
-        return [float(score) if score is not None else None for score in scores]
+        return cast("list[float | None]", client.zmscore(nkey, encoded_members))
 
     def zremrangebyrank(
         self,
@@ -368,4 +373,4 @@ class SortedSetMixin(ClientProtocol):
             client = self.get_client(write=True)
 
         nkey = self.make_key(key, version=version)
-        return int(client.zremrangebyrank(nkey, start, end))
+        return cast("int", client.zremrangebyrank(nkey, start, end))

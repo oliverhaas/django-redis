@@ -3,7 +3,7 @@ import re
 import socket
 from collections import OrderedDict
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache, get_key_func
@@ -38,21 +38,29 @@ def glob_escape(s: str) -> str:
 
 
 class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
-    def __init__(self, server, params: dict[str, Any], backend: BaseCache) -> None:
+    _server: list[str]
+
+    def __init__(
+        self,
+        server: str | list[str] | tuple[str, ...] | set[str],
+        params: dict[str, Any],
+        backend: BaseCache,
+    ) -> None:
         self._backend = backend
-        self._server = server
         self._params = params
 
         self.reverse_key = get_key_func(
             params.get("REVERSE_KEY_FUNCTION") or "django_redis.util.default_reverse_key",
         )
 
-        if not self._server:
+        if not server:
             error_message = "Missing connections string"
             raise ImproperlyConfigured(error_message)
 
-        if not isinstance(self._server, list | tuple | set):
-            self._server = self._server.split(",")
+        if isinstance(server, str):
+            self._server = server.split(",")
+        else:
+            self._server = list(server)
 
         self._clients: list[Redis | RedisCluster | None] = [None] * len(self._server)
         self._options = params.get("OPTIONS", {})
@@ -263,7 +271,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
                         # than to set it and than expire in a pipeline
                         return bool(self.delete(key, client=client, version=version))
 
-                return bool(client.set(nkey, nvalue, nx=nx, px=timeout, xx=xx))
+                return bool(cast("bool | None", client.set(nkey, nvalue, nx=nx, px=timeout, xx=xx)))
             except _main_exceptions as e:
                 if not original_client and not self._replica_read_only and len(tried) < len(self._server):
                     tried.append(index)
@@ -343,7 +351,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         key = self.make_key(key, version=version)
 
         try:
-            value = client.get(key)
+            value = cast("bytes | None", client.get(key))
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -363,7 +371,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         key = self.make_key(key, version=version)
 
-        return client.persist(key)
+        return cast("bool", client.persist(key))
 
     def expire(
         self,
@@ -380,7 +388,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         key = self.make_key(key, version=version)
 
-        return client.expire(key, timeout)
+        return cast("bool", client.expire(key, timeout))
 
     def pexpire(
         self,
@@ -397,7 +405,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         key = self.make_key(key, version=version)
 
-        return bool(client.pexpire(key, timeout))
+        return cast("bool", client.pexpire(key, timeout))
 
     def pexpire_at(
         self,
@@ -415,7 +423,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         key = self.make_key(key, version=version)
 
-        return bool(client.pexpireat(key, when))
+        return cast("bool", client.pexpireat(key, when))
 
     def expire_at(
         self,
@@ -433,7 +441,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         key = self.make_key(key, version=version)
 
-        return client.expireat(key, when)
+        return cast("bool", client.expireat(key, when))
 
     def lock(
         self,
@@ -473,7 +481,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             client = self.get_client(write=True)
 
         try:
-            return client.delete(self.make_key(key, version=version, prefix=prefix))
+            return cast("int", client.delete(self.make_key(key, version=version, prefix=prefix)))
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -526,7 +534,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             return 0
 
         try:
-            return client.delete(*keys)
+            return cast("int", client.delete(*keys))
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -647,7 +655,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         map_keys = OrderedDict((self.make_key(k, version=version), k) for k in keys)
 
         try:
-            results = client.mget(*map_keys)
+            results = cast("list[bytes | None]", client.mget(*map_keys))
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -711,7 +719,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
                     lua = """
                     return redis.call('INCRBY', KEYS[1], ARGV[1])
                     """
-                value = client.eval(lua, 1, key, delta)
+                value = cast("int | None", client.eval(lua, 1, key, delta))
                 if value is None:
                     error_message = f"Key '{key!r}' not found"
                     raise ValueError(error_message)
@@ -784,10 +792,10 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             client = self.get_client(write=False)
 
         key = self.make_key(key, version=version)
-        if not client.exists(key):
+        if not cast("int", client.exists(key)):
             return 0
 
-        t = client.ttl(key)
+        t = cast("int", client.ttl(key))
 
         if t >= 0:
             return t
@@ -813,10 +821,10 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             client = self.get_client(write=False)
 
         key = self.make_key(key, version=version)
-        if not client.exists(key):
+        if not cast("int", client.exists(key)):
             return 0
 
-        t = client.pttl(key)
+        t = cast("int", client.pttl(key))
 
         if t >= 0:
             return t
@@ -843,7 +851,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         key = self.make_key(key, version=version)
         try:
-            return client.exists(key) == 1
+            return cast("int", client.exists(key)) == 1
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -884,7 +892,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         pattern = self.make_pattern(search, version=version)
         try:
-            return [self.reverse_key(k.decode()) for k in client.keys(pattern)]
+            return [self.reverse_key(k.decode()) for k in cast("list[bytes]", client.keys(pattern))]
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
@@ -960,8 +968,8 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         key = self.make_key(key, version=version)
         if timeout is None:
-            return bool(client.persist(key))
+            return cast("bool", client.persist(key))
 
         # Convert to milliseconds
         timeout = int(timeout * 1000)
-        return bool(client.pexpire(key, timeout))
+        return cast("bool", client.pexpire(key, timeout))

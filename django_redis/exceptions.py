@@ -1,5 +1,8 @@
+from typing import Any
+
+
 class ConnectionInterrupted(Exception):
-    def __init__(self, connection, parent=None):
+    def __init__(self, connection: Any, parent: Any = None) -> None:
         self.connection = connection
 
     def __str__(self) -> str:
