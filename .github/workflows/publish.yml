@@ -33,9 +33,6 @@ jobs:
       - name: Run ruff format check
         run: uv run ruff format --check
 
-      - name: Start Redis with Docker Compose
-        run: docker compose -f docker/docker-compose.yml up -d --wait
-
       - name: Run tests
         run: uv run pytest -n auto
 

@@ -1124,76 +1124,80 @@ class DefaultClient(SortedSetMixin):
 
     def hset(
         self,
-        name: str,
         key: KeyT,
+        field: str,
         value: EncodableT,
         version: int | None = None,
         client: Redis | None = None,
     ) -> int:
         """
-        Set the value of hash name at key to value.
+        Set the value of a field in hash at key.
         Returns the number of fields added to the hash.
         """
         if client is None:
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
         nvalue = self.encode(value)
-        return int(client.hset(name, nkey, nvalue))
+        return int(client.hset(nkey, field, nvalue))
 
     def hdel(
         self,
-        name: str,
         key: KeyT,
+        field: str,
         version: int | None = None,
         client: Redis | None = None,
     ) -> int:
         """
-        Remove keys from hash name.
+        Remove a field from hash at key.
         Returns the number of fields deleted from the hash.
         """
         if client is None:
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
-        return int(client.hdel(name, nkey))
+        return int(client.hdel(nkey, field))
 
     def hlen(
         self,
-        name: str,
+        key: KeyT,
+        version: int | None = None,
         client: Redis | None = None,
     ) -> int:
         """
-        Return the number of items in hash name.
+        Return the number of fields in hash at key.
         """
         if client is None:
             client = self.get_client(write=False)
-        return int(client.hlen(name))
+        nkey = self.make_key(key, version=version)
+        return int(client.hlen(nkey))
 
     def hkeys(
         self,
-        name: str,
+        key: KeyT,
+        version: int | None = None,
         client: Redis | None = None,
-    ) -> list[Any]:
+    ) -> list[str]:
         """
-        Return a list of keys in hash name.
+        Return a list of fields in hash at key.
         """
         if client is None:
             client = self.get_client(write=False)
+        nkey = self.make_key(key, version=version)
         try:
-            return [self.reverse_key(k.decode()) for k in client.hkeys(name)]
+            return [k.decode() for k in client.hkeys(nkey)]
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
 
     def hexists(
         self,
-        name: str,
         key: KeyT,
+        field: str,
         version: int | None = None,
         client: Redis | None = None,
     ) -> bool:
         """
-        Return True if key exists in hash name, else False.
+        Return True if field exists in hash at key, else False.
         """
         if client is None:
             client = self.get_client(write=False)
         nkey = self.make_key(key, version=version)
-        return bool(client.hexists(name, nkey))
+        return bool(client.hexists(nkey, field))
