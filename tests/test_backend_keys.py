@@ -10,7 +10,6 @@ from django.core.cache import caches
 from django.test import override_settings
 
 from django_redis.cache import RedisCache
-from django_redis.client import ShardClient
 from tests.settings_wrapper import SettingsWrapper
 
 
@@ -100,9 +99,6 @@ class TestDeletePatternOperations:
 
 class TestIterKeysOperations:
     def test_iter_keys(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support iter_keys")
-
         cache.set("foo1", 1)
         cache.set("foo2", 1)
         cache.set("foo3", 1)
@@ -112,9 +108,6 @@ class TestIterKeysOperations:
         assert result == {"foo1", "foo2", "foo3"}
 
     def test_iter_keys_itersize(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support iter_keys")
-
         cache.set("foo1", 1)
         cache.set("foo2", 1)
         cache.set("foo3", 1)
@@ -124,9 +117,6 @@ class TestIterKeysOperations:
         assert len(result) == 3
 
     def test_iter_keys_generator(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support iter_keys")
-
         cache.set("foo1", 1)
         cache.set("foo2", 1)
         cache.set("foo3", 1)
@@ -139,9 +129,6 @@ class TestIterKeysOperations:
 
 class TestClientSwitching:
     def test_primary_replica_switching(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support get_client")
-
         cache = cast("RedisCache", caches["sample"])
         client = cache.client
         client._server = ["foo", "bar"]
@@ -151,9 +138,6 @@ class TestClientSwitching:
         assert client.get_client(write=False) == "Bar"
 
     def test_primary_replica_switching_with_index(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support get_client")
-
         cache = cast("RedisCache", caches["sample"])
         client = cache.client
         client._server = ["foo", "bar"]

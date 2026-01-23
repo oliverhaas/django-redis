@@ -3,11 +3,9 @@
 import datetime
 from unittest.mock import patch
 
-import pytest
 from pytest_mock import MockerFixture
 
 from django_redis.cache import RedisCache
-from django_redis.client import ShardClient, herd
 from django_redis.serializers.json import JSONSerializer
 from django_redis.serializers.msgpack import MSGPackSerializer
 from tests.settings_wrapper import SettingsWrapper
@@ -139,11 +137,7 @@ class TestBasicCacheOperations:
         self,
         cache: RedisCache,
         mocker: MockerFixture,
-        settings: SettingsWrapper,
     ):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support get_client")
-
         pipeline = cache.client.get_client(write=True).pipeline()
         key = "key"
         value = "value"
@@ -151,25 +145,13 @@ class TestBasicCacheOperations:
         mocked_set = mocker.patch.object(pipeline, "set")
         cache.set(key, value, client=pipeline)
 
-        if isinstance(cache.client, herd.HerdClient):
-            default_timeout = cache.client._backend.default_timeout
-            herd_timeout = (default_timeout + settings.CACHE_HERD_TIMEOUT) * 1000
-            herd_pack_value = cache.client._pack(value, default_timeout)
-            mocked_set.assert_called_once_with(
-                cache.client.make_key(key, version=None),
-                cache.client.encode(herd_pack_value),
-                nx=False,
-                px=herd_timeout,
-                xx=False,
-            )
-        else:
-            mocked_set.assert_called_once_with(
-                cache.client.make_key(key, version=None),
-                cache.client.encode(value),
-                nx=False,
-                px=cache.client._backend.default_timeout * 1000,
-                xx=False,
-            )
+        mocked_set.assert_called_once_with(
+            cache.client.make_key(key, version=None),
+            cache.client.encode(value),
+            nx=False,
+            px=cache.client._backend.default_timeout * 1000,
+            xx=False,
+        )
 
     def test_delete(self, cache: RedisCache):
         cache.set_many({"a": 1, "b": 2, "c": 3})

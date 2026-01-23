@@ -1,14 +1,4 @@
-import pytest
-
 from django_redis.cache import RedisCache
-from django_redis.client import ShardClient
-
-
-@pytest.fixture(autouse=True)
-def skip_shard(cache: RedisCache):
-    """Skip sorted set tests for ShardClient which doesn't support these operations."""
-    if isinstance(cache.client, ShardClient):
-        pytest.skip("ShardClient doesn't support sorted set operations")
 
 
 class TestSortedSetOperations:

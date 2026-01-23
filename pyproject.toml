@@ -154,7 +154,7 @@ disable_error_code = [
 ]
 
 [tool.django-stubs]
-django_settings_module = "tests.settings.sqlite"
+django_settings_module = "tests.settings.base"
 
 [[tool.mypy.overrides]]
 module = "lz4.frame"

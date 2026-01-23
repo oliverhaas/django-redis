@@ -26,8 +26,6 @@ SERIALIZERS = {
 # Available client classes
 CLIENT_CLASSES = {
     "default": "django_redis.client.DefaultClient",
-    "herd": "django_redis.client.HerdClient",
-    "shard": "django_redis.client.ShardClient",
     "sentinel": "django_redis.client.SentinelClient",
 }
 
@@ -45,7 +43,7 @@ def serializers(request) -> str | None:
     return request.param
 
 
-@pytest.fixture(params=["default", "herd", "shard"])
+@pytest.fixture(params=["default"])
 def client_class(request) -> str:
     """Parametrized client class fixture."""
     return request.param
@@ -147,69 +145,13 @@ def build_sentinel_cache_config(
     }
 
 
-def build_shard_cache_config(
-    redis_host: str,
-    redis_port: int,
-    *,
-    compressor: str | None = None,
-    serializer: str | None = None,
-    db1: int = 9,
-    db2: int = 10,
-) -> dict:
-    """Build a CACHES configuration for ShardClient."""
-    options = {"CLIENT_CLASS": CLIENT_CLASSES["shard"]}
-
-    if compressor and compressor in COMPRESSORS:
-        options["COMPRESSOR"] = COMPRESSORS[compressor]
-    if serializer and serializer in SERIALIZERS:
-        options["SERIALIZER"] = SERIALIZERS[serializer]
-
-    return {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": [
-                f"redis://{redis_host}:{redis_port}?db={db1}",
-                f"redis://{redis_host}:{redis_port}?db={db2}",
-            ],
-            "OPTIONS": options,
-        },
-        "doesnotexist": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": [
-                f"redis://{redis_host}:56379?db={db1}",
-                f"redis://{redis_host}:56379?db={db2}",
-            ],
-            "OPTIONS": options.copy(),
-        },
-        "sample": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": f"redis://{redis_host}:{redis_port}?db={db1},redis://{redis_host}:{redis_port}?db={db1}",
-            "OPTIONS": options.copy(),
-        },
-        "with_prefix": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": f"redis://{redis_host}:{redis_port}?db={db1}",
-            "OPTIONS": options.copy(),
-            "KEY_PREFIX": "test-prefix",
-        },
-    }
-
-
 def get_db_number(
     client_class: str,
     compressor: str | None,
     serializer: str | None,
-) -> int | tuple[int, int]:
+) -> int:
     """Calculate the db number based on configuration to avoid conflicts."""
-    base = abs(hash((client_class, compressor, serializer))) % 14 + 1
-
-    if client_class == "shard":
-        db1 = base
-        db2 = (base % 14) + 1
-        if db2 == db1:
-            db2 = (db2 % 14) + 1
-        return (db1, db2)
-    return base
+    return abs(hash((client_class, compressor, serializer))) % 14 + 1
 
 
 def _make_cache(
@@ -221,10 +163,6 @@ def _make_cache(
     serializer_val: str | None,
 ) -> Iterable[BaseCache]:
     """Core cache creation logic shared by all cache fixtures."""
-    # Skip invalid combinations
-    if client_class_val == "herd" and serializer_val is not None:
-        pytest.skip(f"HerdClient is incompatible with {serializer_val} serializer")
-
     redis_host, redis_port = redis_container
 
     # Handle sentinel mode - it overrides other settings
@@ -256,27 +194,16 @@ def _make_cache(
             default_cache.clear()
         return
 
-    # Handle shard client
-    if client_class_val == "shard":
-        db1, db2 = get_db_number(client_class_val, compressor_val, serializer_val)
-        caches = build_shard_cache_config(
-            redis_host,
-            redis_port,
-            compressor=compressor_val,
-            serializer=serializer_val,
-            db1=db1,
-            db2=db2,
-        )
-    else:
-        db = get_db_number(client_class_val, compressor_val, serializer_val)
-        caches = build_cache_config(
-            redis_host,
-            redis_port,
-            client_class=client_class_val,
-            compressor=compressor_val,
-            serializer=serializer_val,
-            db=db,
-        )
+    # Build cache config for default client
+    db = get_db_number(client_class_val, compressor_val, serializer_val)
+    caches = build_cache_config(
+        redis_host,
+        redis_port,
+        client_class=client_class_val,
+        compressor=compressor_val,
+        serializer=serializer_val,
+        db=db,
+    )
 
     with override_settings(CACHES=caches):
         from django.core.cache import cache as default_cache

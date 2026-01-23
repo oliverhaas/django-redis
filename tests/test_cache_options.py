@@ -8,7 +8,6 @@ from pytest import LogCaptureFixture
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 from django_redis.cache import RedisCache
-from django_redis.client import ShardClient
 
 
 def make_key(key: str, prefix: str, version: str) -> str:
@@ -105,9 +104,6 @@ class TestDjangoRedisCacheEscapePrefix:
         key_prefix_cache: RedisCache,
         with_prefix_cache: RedisCache,
     ):
-        if isinstance(key_prefix_cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support iter_keys")
-
         key_prefix_cache.set("a", "1")
         with_prefix_cache.set("b", "2")
         assert list(key_prefix_cache.iter_keys("*")) == ["a"]
@@ -125,9 +121,6 @@ def test_custom_key_function(cache: RedisCache, settings):
     caches_setting["default"]["KEY_FUNCTION"] = "test_cache_options.make_key"
     caches_setting["default"]["REVERSE_KEY_FUNCTION"] = "test_cache_options.reverse_key"
     settings.CACHES = caches_setting
-
-    if isinstance(cache.client, ShardClient):
-        pytest.skip("ShardClient doesn't support get_client")
 
     for key in ["foo-aa", "foo-ab", "foo-bb", "foo-bc"]:
         cache.set(key, "foo")

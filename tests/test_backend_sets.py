@@ -3,7 +3,6 @@
 import pytest
 
 from django_redis.cache import RedisCache
-from django_redis.client import ShardClient
 
 
 class TestSetOperations:
@@ -16,26 +15,17 @@ class TestSetOperations:
         assert cache.scard("foo") == 2
 
     def test_sdiff(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2")
         cache.sadd("foo2", "bar2", "bar3")
         assert cache.sdiff("foo1", "foo2") == {"bar1"}
 
     def test_sdiffstore(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2")
         cache.sadd("foo2", "bar2", "bar3")
         assert cache.sdiffstore("foo3", "foo1", "foo2") == 1
         assert cache.smembers("foo3") == {"bar1"}
 
     def test_sdiffstore_with_keys_version(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2", version=2)
         cache.sadd("foo2", "bar2", "bar3", version=2)
         assert cache.sdiffstore("foo3", "foo1", "foo2", version_keys=2) == 1
@@ -45,9 +35,6 @@ class TestSetOperations:
         self,
         cache: RedisCache,
     ):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2", version=1)
         cache.sadd("foo2", "bar2", "bar3", version=2)
         assert cache.sdiffstore("foo3", "foo1", "foo2", version_keys=2) == 0
@@ -56,25 +43,16 @@ class TestSetOperations:
         self,
         cache: RedisCache,
     ):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2", version=2)
         cache.sadd("foo2", "bar2", "bar3", version=1)
         assert cache.sdiffstore("foo3", "foo1", "foo2", version_keys=2) == 2
 
     def test_sinter(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2")
         cache.sadd("foo2", "bar2", "bar3")
         assert cache.sinter("foo1", "foo2") == {"bar2"}
 
     def test_interstore(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2")
         cache.sadd("foo2", "bar2", "bar3")
         assert cache.sinterstore("foo3", "foo1", "foo2") == 1
@@ -86,9 +64,6 @@ class TestSetOperations:
         assert cache.sismember("foo", "bar2") is False
 
     def test_smove(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2")
         cache.sadd("foo2", "bar2", "bar3")
         assert cache.smove("foo1", "foo2", "bar1") is True
@@ -150,17 +125,11 @@ class TestSetOperations:
         assert cache.smismember("foo", "bar1", "bar2", "xyz") == [True, True, False]
 
     def test_sunion(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2")
         cache.sadd("foo2", "bar2", "bar3")
         assert cache.sunion("foo1", "foo2") == {"bar1", "bar2", "bar3"}
 
     def test_sunionstore(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support multi-key set operations")
-
         cache.sadd("foo1", "bar1", "bar2")
         cache.sadd("foo2", "bar2", "bar3")
         assert cache.sunionstore("foo3", "foo1", "foo2") == 3

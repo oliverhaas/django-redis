@@ -21,11 +21,21 @@ Features and changes we want to make.
   - Branch: `refactor/fix-hash-method-parameters`, `refactor/rename-name-to-key`
 - [ ] Use Python 3.14 builtin zstd when available (with backport fallback)
 
+## Client Architecture
+
+- [ ] Add ClusterClient for Redis Cluster support
+  - Native Redis Cluster (since Redis 3.0, 2015) uses server-side sharding
+  - Should use redis-py's RedisCluster client
+- [x] Remove ShardClient (obsolete client-side sharding from pre-Cluster era)
+- [x] Remove HerdClient (thundering herd protection)
+  - Complex implementation that packed timeout with value
+  - Didn't support incr/decr and many other methods
+  - If needed, could be re-implemented as optional middleware in the future
+
 ## Testing
 
-- [ ] Use testcontainers with Redis and Valkey images instead of Docker Compose
-  - Parametrized session fixture for Redis/Valkey
-  - Branch: `test/containers`
+- [x] Use testcontainers with Redis and Valkey images instead of Docker Compose
+  - Parametrized session fixture for Redis/Valkey/redis-stack-server
 - [ ] Fake cache backend (locmem-style or fakeredis) for testing without Redis
 
 ## Code Quality

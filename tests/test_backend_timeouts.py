@@ -8,14 +8,10 @@ import pytest
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 
 from django_redis.cache import RedisCache
-from django_redis.client import herd
 
 
 class TestTimeoutOperations:
     def test_setnx_timeout(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient adds extra timeout, making expiry tests unreliable")
-
         # test that timeout still works for nx=True
         res = cache.set("test_key_nx", 1, timeout=2, nx=True)
         assert res is True
@@ -36,9 +32,6 @@ class TestTimeoutOperations:
         assert res is None
 
     def test_timeout(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient adds extra timeout, making expiry tests unreliable")
-
         cache.set("test_key", 222, timeout=3)
         time.sleep(4)
 
@@ -51,9 +44,6 @@ class TestTimeoutOperations:
         assert res is None
 
     def test_timeout_parameter_as_positional_argument(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient adds extra timeout, making expiry tests unreliable")
-
         cache.set("test_key", 222, -1)
         res = cache.get("test_key")
         assert res is None
@@ -97,11 +87,7 @@ class TestTTLOperations:
     def test_ttl(self, cache: RedisCache):
         cache.set("foo", "bar", 10)
         ttl = cache.ttl("foo")
-
-        if isinstance(cache.client, herd.HerdClient):
-            assert pytest.approx(ttl) == 12
-        else:
-            assert pytest.approx(ttl) == 10
+        assert pytest.approx(ttl) == 10
 
         # Test ttl None
         cache.set("foo", "foo", timeout=None)
@@ -123,19 +109,12 @@ class TestTTLOperations:
         ttl = cache.pttl("foo")
 
         # delta is set to 10 as precision error causes tests to fail
-        if isinstance(cache.client, herd.HerdClient):
-            assert pytest.approx(ttl, 10) == 12000
-        else:
-            assert pytest.approx(ttl, 10) == 10000
+        assert pytest.approx(ttl, 10) == 10000
 
         # Test pttl with float value
         cache.set("foo", "bar", 5.5)
         ttl = cache.pttl("foo")
-
-        if isinstance(cache.client, herd.HerdClient):
-            assert pytest.approx(ttl, 10) == 7500
-        else:
-            assert pytest.approx(ttl, 10) == 5500
+        assert pytest.approx(ttl, 10) == 5500
 
         # Test pttl None
         cache.set("foo", "foo", timeout=None)
@@ -244,9 +223,6 @@ class TestTouchOperations:
         assert res is None
 
     def test_touch_positive_timeout(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient adds extra timeout, making expiry tests unreliable")
-
         cache.set("test_key", 222, timeout=10)
 
         assert cache.touch("test_key", 2) is True

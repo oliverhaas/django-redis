@@ -3,14 +3,10 @@
 import pytest
 
 from django_redis.cache import RedisCache
-from django_redis.client import ShardClient, herd
 
 
 class TestIncrDecrOperations:
     def test_incr(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient doesn't support incr")
-
         cache.set("num", 1)
 
         cache.incr("num")
@@ -39,9 +35,6 @@ class TestIncrDecrOperations:
         assert res == 5
 
     def test_incr_no_timeout(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient doesn't support incr")
-
         cache.set("num", 1, timeout=None)
 
         cache.incr("num")
@@ -70,19 +63,11 @@ class TestIncrDecrOperations:
         assert res == 5
 
     def test_incr_error(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient doesn't support incr")
-
         with pytest.raises(ValueError):
             # key does not exist
             cache.incr("numnum")
 
     def test_incr_ignore_check(self, cache: RedisCache):
-        if isinstance(cache.client, ShardClient):
-            pytest.skip("ShardClient doesn't support argument ignore_key_check to incr")
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient doesn't support incr")
-
         # key exists check will be skipped and the value will be incremented by
         # '1' which is the default delta
         cache.incr("num", ignore_key_check=True)
@@ -115,9 +100,6 @@ class TestIncrDecrOperations:
         assert res == 5
 
     def test_decr(self, cache: RedisCache):
-        if isinstance(cache.client, herd.HerdClient):
-            pytest.skip("HerdClient doesn't support decr")
-
         cache.set("num", 20)
 
         cache.decr("num")
