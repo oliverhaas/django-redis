@@ -267,14 +267,15 @@ class TestClusterClient:
             backend=mock_backend,
         )
 
-        # Keys without hash tags will likely be in different slots
-        keys = ["key1", "key2", "key3", "key4", "key5"]
+        # Use hash tags that are guaranteed to hash to different slots:
+        # {a} -> slot 15495, {b} -> slot 3300, {c} -> slot 7365
+        keys = ["{a}key1", "{b}key2", "{c}key3"]
         slots = client._group_keys_by_slot(keys)
 
-        # Should have multiple slots (statistically very likely)
-        # At minimum, check the grouping works
+        # Should have exactly 3 slots (one per hash tag)
+        assert len(slots) == 3
         total_keys = sum(len(v) for v in slots.values())
-        assert total_keys == 5
+        assert total_keys == 3
 
     @patch("django_redis.pool.get_connection_factory")
     def test_get_many_groups_by_slot(self, mock_get_factory):
@@ -298,17 +299,24 @@ class TestClusterClient:
         )
 
         # Mock get/mget responses with pickled data
-        mock_cluster.get.return_value = pickle.dumps("value1")
-        mock_cluster.mget.return_value = [pickle.dumps("value2"), pickle.dumps("value3")]
+        # {a} -> slot 15495 (single key, uses GET)
+        # {b} -> slot 3300 (two keys, uses MGET)
+        mock_cluster.get.return_value = pickle.dumps("value_a")
+        mock_cluster.mget.return_value = [pickle.dumps("value_b1"), pickle.dumps("value_b2")]
 
-        # Using hash tags to control slot grouping
+        # Using hash tags that hash to different slots:
+        # {a}key1 -> slot 15495, {b}key2 and {b}key3 -> slot 3300
         result = client.get_many(["{a}key1", "{b}key2", "{b}key3"])
 
         # Should return decoded values
         assert len(result) == 3
-        assert "value1" in result.values()
-        assert "value2" in result.values()
-        assert "value3" in result.values()
+        # Single key in slot uses GET
+        mock_cluster.get.assert_called_once()
+        # Multiple keys in same slot uses MGET
+        mock_cluster.mget.assert_called_once()
+        assert "value_a" in result.values()
+        assert "value_b1" in result.values()
+        assert "value_b2" in result.values()
 
     @patch("django_redis.pool.get_connection_factory")
     def test_get_many_empty_keys(self, mock_get_factory):
@@ -349,14 +357,17 @@ class TestClusterClient:
             backend=mock_backend,
         )
 
-        # Mock delete to return count of deleted keys
-        mock_cluster.delete.return_value = 2
+        # Mock delete to return count of deleted keys per call
+        mock_cluster.delete.return_value = 1
 
-        result = client.delete_many(["{a}key1", "{b}key2", "{b}key3"])
+        # Using hash tags that hash to different slots:
+        # {a} -> slot 15495, {b} -> slot 3300, {c} -> slot 7365
+        result = client.delete_many(["{a}key1", "{b}key2", "{c}key3"])
 
-        # delete called for each slot group
-        assert mock_cluster.delete.called
-        assert result >= 0
+        # delete should be called once per slot (3 different slots)
+        assert mock_cluster.delete.call_count == 3
+        # Total deleted = 1 per call * 3 calls = 3
+        assert result == 3
 
     @patch("django_redis.pool.get_connection_factory")
     def test_delete_many_empty_keys(self, mock_get_factory):
@@ -379,8 +390,37 @@ class TestClusterClient:
         assert result == 0
 
     @patch("django_redis.pool.get_connection_factory")
+    def test_delete_many_same_slot(self, mock_get_factory):
+        """Test delete_many with keys in the same slot uses single delete."""
+        mock_cluster = MagicMock()
+        mock_factory = MagicMock()
+        mock_factory.connect.return_value = mock_cluster
+        mock_get_factory.return_value = mock_factory
+
+        mock_backend = MagicMock()
+        mock_backend.key_prefix = ""
+        mock_backend.version = 1
+        mock_backend.key_func = lambda k, p, v: k
+
+        client = ClusterClient(
+            server=["redis://localhost:7000"],
+            params={"OPTIONS": {}},
+            backend=mock_backend,
+        )
+
+        # Mock delete to return count of deleted keys
+        mock_cluster.delete.return_value = 3
+
+        # All keys have same hash tag {user} -> same slot
+        result = client.delete_many(["{user}key1", "{user}key2", "{user}key3"])
+
+        # delete should be called only once (all keys in same slot)
+        mock_cluster.delete.assert_called_once()
+        assert result == 3
+
+    @patch("django_redis.pool.get_connection_factory")
     def test_set_many(self, mock_get_factory):
-        """Test set_many sets values individually."""
+        """Test set_many sets values individually for cross-slot keys."""
         mock_cluster = MagicMock()
         mock_factory = MagicMock()
         mock_factory.connect.return_value = mock_cluster
@@ -400,10 +440,12 @@ class TestClusterClient:
 
         mock_cluster.set.return_value = True
 
-        client.set_many({"key1": "value1", "key2": "value2"})
+        # Using hash tags that hash to different slots:
+        # {a} -> slot 15495, {b} -> slot 3300, {c} -> slot 7365
+        client.set_many({"{a}key1": "value1", "{b}key2": "value2", "{c}key3": "value3"})
 
-        # Should call set for each key
-        assert mock_cluster.set.call_count == 2
+        # Should call set for each key (3 keys = 3 calls)
+        assert mock_cluster.set.call_count == 3
 
     @patch("django_redis.pool.get_connection_factory")
     def test_clear_flushes_all_primaries(self, mock_get_factory):
