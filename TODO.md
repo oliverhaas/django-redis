@@ -37,6 +37,9 @@ Features and changes we want to make.
 - [x] Conditional compression based on value size
   - `BaseCompressor.min_length = 256` - values below this size are not compressed
   - Subclasses can override if needed
+- [ ] Consider removing IdentityCompressor
+  - `_decompress()` already returns raw value when all compressors fail
+  - May still be useful as explicit "no compression" config option
 - [ ] Benchmarks for compression/serialization overhead
   - Measure latency impact of different compressors
   - Compare serializer performance (pickle vs msgpack vs json)
