@@ -30,8 +30,9 @@ CACHES = {
 
 - Native redis-py URL connection strings
 - Pluggable clients, serializers, and compressors
+- Compressor fallback for safe migration between formats
 - Primary/replica replication support
-- Redis Sentinel support
+- Redis Sentinel and Cluster support
 - Distributed locks
 - Comprehensive test suite
 
