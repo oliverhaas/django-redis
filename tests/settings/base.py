@@ -14,6 +14,9 @@ USE_TZ = False
 
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
+# HerdClient timeout setting (used for thundering herd protection)
+CACHE_HERD_TIMEOUT = 2
+
 # Base CACHES configuration - overridden by test fixtures for parametrized tests.
 # The 'doesnotexist' cache points to an invalid port for testing exception handling.
 CACHES = {
