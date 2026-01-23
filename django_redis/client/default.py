@@ -536,11 +536,8 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
     def _decompress(self, value: bytes) -> bytes:
         """Decompress a value, with fallback support for multiple compressors.
 
-        Tries each compressor in order:
-        1. Call check() to see if this compressor likely encoded the data
-        2. If check() returns True, try decompress()
-        3. If decompress() fails, continue to next compressor
-        4. If all fail, return original value (serializer will handle it)
+        Tries each compressor in order until one succeeds.
+        If all fail, returns original value (serializer will handle it).
 
         Args:
             value: Compressed bytes to decompress
@@ -549,13 +546,9 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             Decompressed bytes, or original value if decompression fails
         """
         for compressor in self._compressors:
-            if not compressor.check(value):
-                continue
             try:
                 return compressor.decompress(value)
             except CompressorError:
-                # check() matched but decompress failed (e.g., corrupted data
-                # or data that happens to start with magic bytes)
                 continue
 
         # All failed - return raw bytes (serializer will handle it)

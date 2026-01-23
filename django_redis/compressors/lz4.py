@@ -6,20 +6,11 @@ from django_redis.exceptions import CompressorError
 
 
 class Lz4Compressor(BaseCompressor):
-    min_length = 15
-    # LZ4 frame magic bytes: 04 22 4d 18
-    _magic = b"\x04\x22\x4d\x18"
-
-    def compress(self, value: bytes) -> bytes:
-        if len(value) > self.min_length:
-            return _compress(value)
-        return value
+    def _compress_impl(self, value: bytes) -> bytes:
+        return _compress(value)
 
     def decompress(self, value: bytes) -> bytes:
         try:
             return _decompress(value)
         except Exception as e:
             raise CompressorError from e
-
-    def check(self, value: bytes) -> bool:
-        return value.startswith(self._magic)

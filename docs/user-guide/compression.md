@@ -85,7 +85,7 @@ CACHES = {
 
 When migrating from one compressor to another, you can specify a list of compressors.
 The first compressor is used for writing new data, while all compressors are tried
-when reading (using magic byte detection for efficient format identification).
+in order when reading until one succeeds.
 
 This allows safe migration between compression formats without data loss:
 
@@ -129,21 +129,10 @@ CACHES = {
 
 ### How It Works
 
-Each compressor has a `check()` method that uses magic byte detection:
+When decompressing, each compressor is tried in order. If decompression fails,
+the next compressor is tried. This continues until one succeeds or all fail.
 
-| Compressor | Magic Bytes |
-|------------|-------------|
-| Gzip | `\x1f\x8b` |
-| Zlib | `\x78\x01`, `\x78\x9c`, `\x78\xda` |
-| Zstandard | `\x28\xb5\x2f\xfd` |
-| LZ4 | `\x04\x22\x4d\x18` |
-| LZMA | `\xfd7zXZ\x00` |
-| Identity | Always matches (catch-all) |
-
-When decompressing, each compressor's `check()` is called. If it returns `True`,
-decompression is attempted. If decompression fails, the next compressor is tried.
-
-**Note:** Place `None` (IdentityCompressor) last in the list as it matches any data.
+**Note:** Place `None` (IdentityCompressor) last in the list to handle uncompressed data.
 
 ## Compression Comparison
 

@@ -3,60 +3,6 @@
 import gzip
 import zlib
 
-from django_redis.compressors.gzip import GzipCompressor
-from django_redis.compressors.identity import IdentityCompressor
-from django_redis.compressors.zlib import ZlibCompressor
-
-
-class TestCompressorCheck:
-    """Tests for the check() method on compressors."""
-
-    def test_gzip_check_detects_gzip_data(self):
-        """Test that GzipCompressor.check() detects gzip-compressed data."""
-        compressor = GzipCompressor({})
-        data = b"Test data for compression! " * 50
-        compressed = gzip.compress(data)
-        assert compressor.check(compressed) is True
-
-    def test_gzip_check_rejects_non_gzip_data(self):
-        """Test that GzipCompressor.check() rejects non-gzip data."""
-        compressor = GzipCompressor({})
-        assert compressor.check(b"Plain text data") is False
-        assert compressor.check(b"") is False
-
-    def test_zlib_check_detects_zlib_data(self):
-        """Test that ZlibCompressor.check() detects zlib-compressed data."""
-        compressor = ZlibCompressor({})
-        data = b"Test data for compression! " * 50
-        compressed = zlib.compress(data)
-        assert compressor.check(compressed) is True
-
-    def test_zlib_check_rejects_non_zlib_data(self):
-        """Test that ZlibCompressor.check() rejects non-zlib data."""
-        compressor = ZlibCompressor({})
-        assert compressor.check(b"Plain text data") is False
-
-    def test_identity_check_always_returns_true(self):
-        """Test that IdentityCompressor.check() always returns True."""
-        compressor = IdentityCompressor({})
-        assert compressor.check(b"Anything") is True
-        assert compressor.check(b"") is True
-        assert compressor.check(gzip.compress(b"data")) is True
-
-    def test_gzip_check_with_zlib_data_returns_false(self):
-        """Test that GzipCompressor.check() returns False for zlib data."""
-        gzip_compressor = GzipCompressor({})
-        data = b"Test data" * 50
-        zlib_compressed = zlib.compress(data)
-        assert gzip_compressor.check(zlib_compressed) is False
-
-    def test_zlib_check_with_gzip_data_returns_false(self):
-        """Test that ZlibCompressor.check() returns False for gzip data."""
-        zlib_compressor = ZlibCompressor({})
-        data = b"Test data" * 50
-        gzip_compressed = gzip.compress(data)
-        assert zlib_compressor.check(gzip_compressed) is False
-
 
 class TestDefaultClientCompressorConfig:
     """Tests for DefaultClient compressor configuration handling."""
@@ -293,8 +239,8 @@ class TestHasCompressionEnabled:
 class TestDecompressFallback:
     """Tests for the _decompress fallback logic."""
 
-    def test_decompress_detects_gzip_with_multiple_compressors(self):
-        """Test that _decompress correctly detects and decompresses gzip data."""
+    def test_decompress_gzip_with_multiple_compressors(self):
+        """Test that _decompress correctly decompresses gzip data."""
         from unittest.mock import MagicMock
 
         from django_redis.client.default import DefaultClient
@@ -323,8 +269,8 @@ class TestDecompressFallback:
 
         assert client._decompress(gzip_data) == data
 
-    def test_decompress_detects_zlib_with_multiple_compressors(self):
-        """Test that _decompress correctly detects and decompresses zlib data."""
+    def test_decompress_zlib_with_fallback(self):
+        """Test that _decompress falls back to zlib for zlib-compressed data."""
         from unittest.mock import MagicMock
 
         from django_redis.client.default import DefaultClient
@@ -351,10 +297,11 @@ class TestDecompressFallback:
         data = b"Test data for compression! " * 50
         zlib_data = zlib.compress(data)
 
+        # gzip will fail, zlib should succeed
         assert client._decompress(zlib_data) == data
 
-    def test_decompress_returns_raw_when_no_match(self):
-        """Test that _decompress returns raw bytes when no compressor matches."""
+    def test_decompress_returns_raw_when_all_fail(self):
+        """Test that _decompress returns raw bytes when all compressors fail."""
         from unittest.mock import MagicMock
 
         from django_redis.client.default import DefaultClient
@@ -377,7 +324,7 @@ class TestDecompressFallback:
             backend=backend,
         )
 
-        # Plain data that doesn't look like gzip
+        # Plain data that isn't gzip
         data = b"Plain uncompressed data"
         assert client._decompress(data) == data
 
@@ -406,10 +353,10 @@ class TestDecompressFallback:
         )
 
         data = b"Plain uncompressed data"
-        # Identity compressor's check() returns True and decompress returns as-is
+        # gzip fails, identity returns as-is
         assert client._decompress(data) == data
 
-    def test_decompress_continues_on_decompression_failure(self):
+    def test_decompress_continues_on_failure(self):
         """Test that _decompress continues to next compressor on failure."""
         from unittest.mock import MagicMock
 
@@ -433,8 +380,7 @@ class TestDecompressFallback:
             backend=backend,
         )
 
-        # Data that starts with gzip magic bytes but isn't valid gzip
-        # This will make check() return True but decompress() will fail
+        # Data that looks like it could be gzip but isn't valid
         fake_gzip = b"\x1f\x8bNot actually valid gzip data"
-        # Should fall through to identity and return as-is
+        # gzip fails, falls through to identity
         assert client._decompress(fake_gzip) == fake_gzip
