@@ -1,3 +1,4 @@
+from typing import ClassVar
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from django.conf import settings
@@ -16,7 +17,7 @@ class ConnectionFactory:
     # ConnectionFactory is instantiated, as Django creates new cache client
     # (DefaultClient) instance for every request.
 
-    _pools: dict[str, ConnectionPool] = {}
+    _pools: ClassVar[dict[str, ConnectionPool]] = {}
 
     def __init__(self, options):
         pool_cls_path = options.get(
@@ -33,11 +34,9 @@ class ConnectionFactory:
         self.options = options
 
     def make_connection_params(self, url):
-        """
-        Given a main connection parameters, build a complete
+        """Given a main connection parameters, build a complete
         dict of connection parameters.
         """
-
         kwargs = {
             "url": url,
             "parser_class": self.get_parser_cls(),
@@ -64,24 +63,21 @@ class ConnectionFactory:
         return kwargs
 
     def connect(self, url: str) -> Redis:
-        """
-        Given a basic connection parameters,
+        """Given a basic connection parameters,
         return a new connection.
         """
         params = self.make_connection_params(url)
         return self.get_connection(params)
 
     def disconnect(self, connection: Redis) -> None:
-        """
-        Given a not null client connection it disconnect from the Redis server.
+        """Given a not null client connection it disconnect from the Redis server.
 
         The default implementation uses a pool to hold connections.
         """
         connection.connection_pool.disconnect()
 
     def get_connection(self, params):
-        """
-        Given a now preformatted params, return a
+        """Given a now preformatted params, return a
         new connection.
 
         The default implementation uses a cached pools
@@ -100,8 +96,7 @@ class ConnectionFactory:
         return import_string(cls)
 
     def get_or_create_connection_pool(self, params):
-        """
-        Given a connection parameters and return a new
+        """Given a connection parameters and return a new
         or cached connection pool for them.
 
         Reimplement this method if you want distinct
@@ -113,8 +108,7 @@ class ConnectionFactory:
         return self._pools[key]
 
     def get_connection_pool(self, params):
-        """
-        Given a connection parameters, return a new
+        """Given a connection parameters, return a new
         connection pool for them.
 
         Overwrite this method if you want a custom
@@ -157,8 +151,7 @@ class SentinelConnectionFactory(ConnectionFactory):
         )
 
     def get_connection_pool(self, params):
-        """
-        Given a connection parameters, return a new sentinel connection pool
+        """Given a connection parameters, return a new sentinel connection pool
         for them.
         """
         url = urlparse(params["url"])
@@ -192,14 +185,13 @@ class SentinelConnectionFactory(ConnectionFactory):
 
 
 class ClusterConnectionFactory:
-    """
-    Connection factory for Redis Cluster.
+    """Connection factory for Redis Cluster.
 
     Redis Cluster manages its own connection pool internally, so this factory
     creates and caches RedisCluster instances directly.
     """
 
-    _clusters: dict[str, RedisCluster] = {}
+    _clusters: ClassVar[dict[str, RedisCluster]] = {}
 
     def __init__(self, options):
         self.options = options

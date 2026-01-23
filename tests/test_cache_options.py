@@ -77,7 +77,7 @@ def key_prefix_cache(cache: RedisCache, settings) -> Iterable[RedisCache]:
     caches_setting = copy.deepcopy(settings.CACHES)
     caches_setting["default"]["KEY_PREFIX"] = "*"
     settings.CACHES = caches_setting
-    yield cache
+    return cache
 
 
 @pytest.fixture

@@ -75,63 +75,55 @@ line-length = 120
 fix = true
 
 [tool.ruff.lint]
-select = [
-  "A",      # flake8-builtins
-  "B",      # flake8-bugbear
-  "BLE",    # flake8-blind-except
-  "C4",     # flake8-comprehensions
-  "C90",    # mccabe complexity
-  "COM",    # flake8-commas
-  "DJ",     # flake8-django
-  "E",      # pycodestyle errors
-  "EM",     # flake8-errmsg
-  "EXE",    # flake8-executable
-  "F",      # pyflakes
-  "G",      # flake8-logging-format
-  "I",      # isort
-  "ICN",    # flake8-import-conventions
-  "INP",    # flake8-no-pep420
-  "INT",    # flake8-gettext
-  "ISC",    # flake8-implicit-str-concat
-  "PTH",    # flake8-use-pathlib
-  "PYI",    # flake8-pyi
-  "RET",    # flake8-return
-  "RSE",    # flake8-raise
-  "RUF100", # unused-noqa
-  "S",      # flake8-bandit
-  "SIM",    # flake8-simplify
-  "T10",    # flake8-debugger
-  "T20",    # flake8-print
-  "TCH",    # flake8-type-checking
-  "TID",    # flake8-tidy-imports
-  "UP",     # pyupgrade
-  "W",      # pycodestyle warnings
-  "YTT",    # flake8-2020
-]
+select = ["ALL"]
 ignore = [
-  "S311", # Standard pseudo-random generators (not cryptographic)
+  "COM812", # Conflicts with ruff-format
+  "D1",     # Missing docstrings - too many to add at once
+  "E501",   # Line too long - line-length config handles this
+  "N818",   # Exception naming - ConnectionInterrupted is established name
+  "SLF001", # Private member access needed for Django/redis-py internals
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = ["S101"] # Allow assert in tests
-"tests/settings/*.py" = ["S105"] # Allow hardcoded passwords in test settings
+"django_redis/**" = [
+  "ANN",     # Type annotations handled by mypy with stricter checking
+  "ARG002",  # Unused arguments in method overrides for API compatibility
+  "D",       # Docstrings - will add incrementally
+  "FBT",     # Boolean traps are common in cache/Redis APIs
+  "PGH003",  # Type ignores are validated by mypy, not ruff
+  "PLC0415", # Dynamic imports are intentional (e.g., get_redis_connection)
+  "PLR0913", # Many arguments needed for Redis operations
+  "PLR2004", # Magic values like -2 for Redis TTL are domain-specific
+  "S311",    # Random is fine for non-cryptographic key generation
+]
 "django_redis/serializers/pickle.py" = ["A005", "S301"] # Pickle is intentional
-"django_redis/serializers/json.py" = [
-  "A005",
-] # Intentionally named to match format
-"django_redis/compressors/gzip.py" = [
-  "A005",
-] # Intentionally named to match format
-"django_redis/compressors/lzma.py" = [
-  "A005",
-] # Intentionally named to match format
-"django_redis/compressors/zlib.py" = [
-  "A005",
-] # Intentionally named to match format
+"django_redis/serializers/json.py" = ["A005"] # Named to match format
+"django_redis/compressors/gzip.py" = ["A005"] # Named to match format
+"django_redis/compressors/lzma.py" = ["A005"] # Named to match format
+"django_redis/compressors/zlib.py" = ["A005"] # Named to match format
 "django_redis/client/mixins/sorted_sets.py" = ["A002"] # min/max match Redis API
+"tests/**" = [
+  "ANN",     # Type annotations not required in tests
+  "ARG",     # Unused arguments common in fixtures
+  "D",       # Docstrings not required in tests
+  "DTZ005",  # Timezone-naive datetime okay in tests
+  "FBT",     # Boolean arguments common in test helpers
+  "PLC0415", # Conditional/lazy imports are common in tests
+  "PLR0913", # Many arguments in test fixtures
+  "PLR2004", # Magic values in tests are fine
+  "PT006",   # Parametrize tuple style is preference
+  "PT011",   # Broad pytest.raises is okay in some tests
+  "PT013",   # pytest import style is preference
+  "PT018",   # Composite assertions okay in tests
+  "RUF002",  # Unicode characters in docstrings are fine
+  "RUF015",  # next(iter()) vs slice is preference
+  "S101",    # assert in tests
+  "S105",    # Hardcoded passwords in test settings
+  "S311",    # random is fine for tests
+]
 
 [tool.mypy]
 python_version = "3.13"

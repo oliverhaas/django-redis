@@ -3,10 +3,7 @@ __version__ = ".".join(map(str, VERSION))
 
 
 def get_redis_connection(alias="default", write=True):
-    """
-    Helper used for obtaining a raw redis client.
-    """
-
+    """Helper used for obtaining a raw redis client."""
     from django.core.cache import caches
 
     cache = caches[alias]

@@ -348,8 +348,7 @@ def test_actual_expiry(session):
 
 
 def test_session_load_does_not_create_record(session):
-    """
-    Loading an unknown session key does not create a session record.
+    """Loading an unknown session key does not create a session record.
     Creating session records on load is a DOS vulnerability.
     """
     session = SessionStore("someunknownkey")
@@ -362,9 +361,7 @@ def test_session_load_does_not_create_record(session):
 
 
 def test_session_save_does_not_resurrect_session_logged_out_in_other_context(session):
-    """
-    Sessions shouldn't be resurrected by a concurrent request.
-    """
+    """Sessions shouldn't be resurrected by a concurrent request."""
     from django.contrib.sessions.backends.base import UpdateError
 
     # Create new session.

@@ -95,6 +95,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             List of serializer instances.
             - First serializer is used for serialization (writing)
             - All serializers are tried for deserialization (reading)
+
         """
         if isinstance(serializer_config, list):
             serializers = []
@@ -118,13 +119,13 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             List of compressor instances.
             - First compressor is used for compression (writing)
             - All compressors are tried for decompression (reading)
+
         """
         if isinstance(compressor_config, list):
             compressors = []
             for path in compressor_config:
-                if path is None:
-                    path = "django_redis.compressors.identity.IdentityCompressor"
-                compressor_cls = import_string(path)
+                actual_path = path or "django_redis.compressors.identity.IdentityCompressor"
+                compressor_cls = import_string(actual_path)
                 compressors.append(compressor_cls(options=self._options))
             return compressors
 
@@ -151,8 +152,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         write: bool = True,
         tried: list[int] | None = None,
     ) -> int:
-        """
-        Return a next index for read client. This function implements a default
+        """Return a next index for read client. This function implements a default
         behavior for get a next read client for a replication setup.
 
         Overwrite this function if you want a specific
@@ -162,7 +162,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             tried = []
 
         if tried and len(tried) < len(self._server):
-            not_tried = [i for i in range(0, len(self._server)) if i not in tried]
+            not_tried = [i for i in range(len(self._server)) if i not in tried]
             return random.choice(not_tried)
 
         if write or len(self._server) == 1:
@@ -175,8 +175,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         write: bool = True,
         tried: list[int] | None = None,
     ) -> Redis:
-        """
-        Method used for obtain a raw redis client.
+        """Method used for obtain a raw redis client.
 
         This function is used by almost all cache backend
         operations for obtain a native redis client/connection
@@ -187,15 +186,14 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         if self._clients[index] is None:
             self._clients[index] = self.connect(index)
 
-        return self._clients[index]  # type:ignore
+        return self._clients[index]  # type: ignore[return-value]
 
     def get_client_with_index(
         self,
         write: bool = True,
         tried: list[int] | None = None,
     ) -> tuple[Redis, int]:
-        """
-        Method used for obtain a raw redis client.
+        """Method used for obtain a raw redis client.
 
         This function is used by almost all cache backend
         operations for obtain a native redis client/connection
@@ -206,20 +204,17 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         if self._clients[index] is None:
             self._clients[index] = self.connect(index)
 
-        return self._clients[index], index  # type:ignore
+        return self._clients[index], index  # type: ignore[return-value]
 
     def connect(self, index: int = 0) -> Redis:
-        """
-        Given a connection index, returns a new raw redis client/connection
+        """Given a connection index, returns a new raw redis client/connection
         instance. Index is used for replication setups and indicates that
         connection string should be used. In normal setups, index is 0.
         """
         return self.connection_factory.connect(self._server[index])
 
     def disconnect(self, index: int = 0, client: Redis | None = None) -> None:
-        """
-        delegates the connection factory to disconnect the client
-        """
+        """Delegates the connection factory to disconnect the client"""
         if client is None:
             client = self._clients[index]
 
@@ -236,8 +231,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         nx: bool = False,
         xx: bool = False,
     ) -> bool:
-        """
-        Persist a value to the cache, and set an optional expiration time.
+        """Persist a value to the cache, and set an optional expiration time.
 
         Also supports optional nx parameter. If set to True - will use redis
         setnx instead of set.
@@ -286,11 +280,9 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> int:
-        """
-        Adds delta to the cache version for the supplied key. Returns the
+        """Adds delta to the cache version for the supplied key. Returns the
         new version.
         """
-
         if client is None:
             client = self.get_client(write=True)
 
@@ -326,8 +318,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> bool:
-        """
-        Add a value to the cache, failing if the key already exists.
+        """Add a value to the cache, failing if the key already exists.
 
         Returns ``True`` if the object was added, ``False`` if not.
         """
@@ -340,8 +331,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> Any:
-        """
-        Retrieve a value from the cache.
+        """Retrieve a value from the cache.
 
         Returns decoded value if key is found, the default if not.
         """
@@ -381,7 +371,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         client: Redis | None = None,
     ) -> bool:
         if timeout is DEFAULT_TIMEOUT:
-            timeout = self._backend.default_timeout  # type: ignore
+            timeout = self._backend.default_timeout  # pyright: ignore[reportAttributeAccessIssue]
 
         if client is None:
             client = self.get_client(write=True)
@@ -398,7 +388,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         client: Redis | None = None,
     ) -> bool:
         if timeout is DEFAULT_TIMEOUT:
-            timeout = self._backend.default_timeout  # type: ignore
+            timeout = self._backend.default_timeout  # pyright: ignore[reportAttributeAccessIssue]
 
         if client is None:
             client = self.get_client(write=True)
@@ -414,8 +404,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> bool:
-        """
-        Set an expire flag on a ``key`` to ``when``, which can be represented
+        """Set an expire flag on a ``key`` to ``when``, which can be represented
         as an integer indicating unix time or a Python datetime object.
         """
         if client is None:
@@ -432,8 +421,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> bool:
-        """
-        Set an expire flag on a ``key`` to ``when``, which can be represented
+        """Set an expire flag on a ``key`` to ``when``, which can be represented
         as an integer indicating unix time or a Python datetime object.
         """
         if client is None:
@@ -474,9 +462,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         prefix: str | None = None,
         client: Redis | None = None,
     ) -> int:
-        """
-        Remove a key from the cache.
-        """
+        """Remove a key from the cache."""
         if client is None:
             client = self.get_client(write=True)
 
@@ -493,10 +479,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         client: Redis | None = None,
         itersize: int | None = None,
     ) -> int:
-        """
-        Remove all keys matching pattern.
-        """
-
+        """Remove all keys matching pattern."""
         if client is None:
             client = self.get_client(write=True)
 
@@ -510,10 +493,10 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
                 pipeline.delete(key)
                 count += 1
             pipeline.execute()
-
-            return count
         except _main_exceptions as e:
             raise ConnectionInterrupted(connection=client) from e
+        else:
+            return count
 
     def delete_many(
         self,
@@ -521,10 +504,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> int:
-        """
-        Remove multiple keys at once.
-        """
-
+        """Remove multiple keys at once."""
         if client is None:
             client = self.get_client(write=True)
 
@@ -539,10 +519,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             raise ConnectionInterrupted(connection=client) from e
 
     def clear(self, client: Redis | None = None) -> None:
-        """
-        Flush all cache keys.
-        """
-
+        """Flush all cache keys."""
         if client is None:
             client = self.get_client(write=True)
 
@@ -552,9 +529,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             raise ConnectionInterrupted(connection=client) from e
 
     def decode(self, value: EncodableT) -> Any:
-        """
-        Decode the given value.
-        """
+        """Decode the given value."""
         try:
             value = int(value)
         except (ValueError, TypeError):
@@ -574,6 +549,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         Returns:
             Deserialized Python object
+
         """
         last_error: SerializerError | None = None
         for serializer in self._serializers:
@@ -600,6 +576,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         Returns:
             Decompressed bytes, or original value if decompression fails
+
         """
         for compressor in self._compressors:
             try:
@@ -611,10 +588,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         return value
 
     def encode(self, value: EncodableT) -> bytes | int:
-        """
-        Encode the given value.
-        """
-
+        """Encode the given value."""
         if isinstance(value, bool) or not isinstance(value, int):
             value = self._serializers[0].dumps(value)
             return self._compressors[0].compress(value)
@@ -640,10 +614,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> OrderedDict:
-        """
-        Retrieve many keys.
-        """
-
+        """Retrieve many keys."""
         if client is None:
             client = self.get_client(write=False)
 
@@ -672,8 +643,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> None:
-        """
-        Set a bunch of values in the cache at once from a dict of key/value
+        """Set a bunch of values in the cache at once from a dict of key/value
         pairs. This is much more efficient than calling set() multiple times.
 
         If timeout is given, that timeout will be used for the key; otherwise
@@ -752,8 +722,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         client: Redis | None = None,
         ignore_key_check: bool = False,
     ) -> int:
-        """
-        Add delta to value in the cache. If the key does not exist, raise a
+        """Add delta to value in the cache. If the key does not exist, raise a
         ValueError exception. if ignore_key_check=True then the key will be
         created and set to the delta value by default.
         """
@@ -772,8 +741,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> int:
-        """
-        Decreace delta to value in the cache. If the key does not exist, raise a
+        """Decreace delta to value in the cache. If the key does not exist, raise a
         ValueError exception.
         """
         return self._incr(key=key, delta=-delta, version=version, client=client)
@@ -784,8 +752,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> int | None:
-        """
-        Executes TTL redis command and return the "time-to-live" of specified key.
+        """Executes TTL redis command and return the "time-to-live" of specified key.
         If key is a non volatile key, it returns None.
         """
         if client is None:
@@ -813,8 +780,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> int | None:
-        """
-        Executes PTTL redis command and return the "time-to-live" of specified key.
+        """Executes PTTL redis command and return the "time-to-live" of specified key.
         If key is a non volatile key, it returns None.
         """
         if client is None:
@@ -842,10 +808,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> bool:
-        """
-        Test if key exists.
-        """
-
+        """Test if key exists."""
         if client is None:
             client = self.get_client(write=False)
 
@@ -862,11 +825,9 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         client: Redis | None = None,
         version: int | None = None,
     ) -> Iterator[str]:
-        """
-        Same as keys, but uses redis >= 2.8 cursors
+        """Same as keys, but uses redis >= 2.8 cursors
         for make memory efficient keys iteration.
         """
-
         if client is None:
             client = self.get_client(write=False)
 
@@ -880,13 +841,11 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> list[Any]:
-        """
-        Execute KEYS command and return matched results.
+        """Execute KEYS command and return matched results.
         Warning: this can return huge number of results, in
         this case, it strongly recommended use iter_keys
         for it.
         """
-
         if client is None:
             client = self.get_client(write=False)
 
@@ -941,9 +900,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             self.do_close_clients()
 
     def do_close_clients(self) -> None:
-        """
-        default implementation: Override in custom client
-        """
+        """Default implementation: Override in custom client"""
         num_clients = len(self._clients)
         for idx in range(num_clients):
             self.disconnect(index=idx)
@@ -956,10 +913,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         version: int | None = None,
         client: Redis | None = None,
     ) -> bool:
-        """
-        Sets a new expiration for a key.
-        """
-
+        """Sets a new expiration for a key."""
         if timeout is DEFAULT_TIMEOUT:
             timeout = self._backend.default_timeout
 

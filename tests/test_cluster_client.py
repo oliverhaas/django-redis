@@ -43,7 +43,7 @@ class TestClusterConnectionFactory:
         factory = ClusterConnectionFactory({"PASSWORD": "secret123"})
         params = factory.make_connection_params("redis://localhost:7000")
 
-        assert params["password"] == "secret123"  # noqa: S105
+        assert params["password"] == "secret123"
 
     def test_make_connection_params_with_timeouts(self):
         """Test connection params include timeout settings."""
@@ -517,7 +517,6 @@ class TestClusterClient:
     @patch("django_redis.pool.get_connection_factory")
     def test_keys_empty_result(self, mock_get_factory):
         """Test keys() with no matching keys."""
-
         mock_cluster = MagicMock()
         mock_factory = MagicMock()
         mock_factory.connect.return_value = mock_cluster
@@ -657,7 +656,6 @@ class TestClusterClient:
     @patch("django_redis.pool.get_connection_factory")
     def test_delete_pattern_empty_result(self, mock_get_factory):
         """Test delete_pattern() with no matching keys."""
-
         mock_cluster = MagicMock()
         mock_factory = MagicMock()
         mock_factory.connect.return_value = mock_cluster
@@ -685,7 +683,6 @@ class TestClusterClient:
     @patch("django_redis.pool.get_connection_factory")
     def test_delete_pattern_groups_by_slot(self, mock_get_factory):
         """Test delete_pattern() groups keys by slot for deletion."""
-
         mock_cluster = MagicMock()
         mock_factory = MagicMock()
         mock_factory.connect.return_value = mock_cluster

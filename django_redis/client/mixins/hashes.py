@@ -27,8 +27,7 @@ class HashMixin(ClientProtocol):
         version: int | None = None,
         client: Redis | None = None,
     ) -> int:
-        """
-        Set the value of a field in hash at key.
+        """Set the value of a field in hash at key.
         Returns the number of fields added to the hash.
         """
         if client is None:
@@ -44,8 +43,7 @@ class HashMixin(ClientProtocol):
         version: int | None = None,
         client: Redis | None = None,
     ) -> int:
-        """
-        Remove a field from hash at key.
+        """Remove a field from hash at key.
         Returns the number of fields deleted from the hash.
         """
         if client is None:

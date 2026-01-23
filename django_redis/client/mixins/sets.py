@@ -222,7 +222,7 @@ class SetMixin(ClientProtocol):
             client = self.get_client(write=False)
 
         nkey = self.make_key(key, version=version)
-        cursor, result = cast(
+        _, result = cast(
             "tuple[int, list[bytes]]",
             client.sscan(
                 nkey,

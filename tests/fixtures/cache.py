@@ -287,8 +287,7 @@ def cache(
     redis_container: tuple[str, int],
     request: pytest.FixtureRequest,
 ) -> Iterable[BaseCache]:
-    """
-    Django cache fixture parametrized by client_class × sentinel_mode.
+    """Django cache fixture parametrized by client_class × sentinel_mode.
 
     If the test also requests `compressor` or `serializer` fixtures,
     those will be used (creating additional Cartesian product).

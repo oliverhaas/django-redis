@@ -11,8 +11,7 @@ def replace_query(url, query):
 
 
 class SentinelClient(DefaultClient):
-    """
-    Sentinel client which uses the single redis URL specified by the CACHE's
+    """Sentinel client which uses the single redis URL specified by the CACHE's
     LOCATION to create a LOCATION configuration for two connection pools; One
     pool for the primaries and another pool for the replicas, and upon
     connecting ensures the connection pool factory is configured correctly.

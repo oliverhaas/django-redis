@@ -13,8 +13,7 @@ from django_redis.exceptions import ConnectionInterrupted
 
 
 class ClusterClient(DefaultClient):
-    """
-    Client for Redis Cluster.
+    """Client for Redis Cluster.
 
     Redis Cluster uses server-side sharding across multiple nodes.
     This client handles the connection to a Redis Cluster and delegates
@@ -36,16 +35,13 @@ class ClusterClient(DefaultClient):
         write: bool = True,
         tried: list[int] | None = None,
     ) -> int:
-        """
-        Always return 0 for cluster client since the cluster
+        """Always return 0 for cluster client since the cluster
         handles routing internally.
         """
         return 0
 
     def connect(self, index: int = 0) -> RedisCluster:  # type: ignore[override]
-        """
-        Connect to the Redis Cluster.
-        """
+        """Connect to the Redis Cluster."""
         return self.connection_factory.connect(self._server[0])
 
     def get_client(  # type: ignore[override]
@@ -93,8 +89,7 @@ class ClusterClient(DefaultClient):
         version: int | None = None,
         client: RedisCluster | None = None,  # type: ignore[override]
     ) -> OrderedDict:
-        """
-        Retrieve many keys, handling cross-slot keys by grouping.
+        """Retrieve many keys, handling cross-slot keys by grouping.
 
         Unlike standalone Redis, cluster mode requires keys to be on the
         same slot for MGET. This method groups keys by slot and performs
@@ -126,8 +121,7 @@ class ClusterClient(DefaultClient):
                 else:
                     # Multiple keys in same slot - use MGET
                     results = cast("list[bytes | None]", client.mget(*slot_keys))
-                    for key, value in zip(slot_keys, results, strict=False):
-                        all_results[key] = value
+                    all_results |= dict(zip(slot_keys, results, strict=False))
 
             # Build result in original order
             for made_key, original_key in map_keys.items():
@@ -146,8 +140,7 @@ class ClusterClient(DefaultClient):
         version: int | None = None,
         client: RedisCluster | None = None,  # type: ignore[override]
     ) -> int:
-        """
-        Remove multiple keys, handling cross-slot keys by grouping.
+        """Remove multiple keys, handling cross-slot keys by grouping.
 
         Unlike standalone Redis, cluster mode requires keys to be on the
         same slot for multi-key DEL. This method groups keys by slot and
@@ -168,9 +161,10 @@ class ClusterClient(DefaultClient):
             total_deleted = 0
             for slot_keys in slots.values():
                 total_deleted += cast("int", client.delete(*slot_keys))
-            return total_deleted
         except Exception as e:
             raise ConnectionInterrupted(connection=client) from e
+        else:
+            return total_deleted
 
     def set_many(
         self,
@@ -179,8 +173,7 @@ class ClusterClient(DefaultClient):
         version: int | None = None,
         client: RedisCluster | None = None,  # type: ignore[override]
     ) -> None:
-        """
-        Set multiple values, handling cross-slot keys.
+        """Set multiple values, handling cross-slot keys.
 
         Uses individual SET commands since MSET requires same-slot keys.
         """
@@ -195,8 +188,7 @@ class ClusterClient(DefaultClient):
             raise ConnectionInterrupted(connection=client) from e
 
     def clear(self, client: RedisCluster | None = None) -> None:  # type: ignore[override]
-        """
-        Flush cache keys on all cluster nodes.
+        """Flush cache keys on all cluster nodes.
 
         In cluster mode, FLUSHDB only affects the connected node.
         This method flushes all primary nodes in the cluster.
@@ -217,8 +209,7 @@ class ClusterClient(DefaultClient):
         version: int | None = None,
         client: RedisCluster | None = None,  # type: ignore[override]
     ) -> list[Any]:
-        """
-        Execute KEYS command across all primary nodes.
+        """Execute KEYS command across all primary nodes.
 
         In cluster mode, KEYS only operates on the connected node.
         This method queries all primary nodes in the cluster.
@@ -240,8 +231,7 @@ class ClusterClient(DefaultClient):
         client: RedisCluster | None = None,  # type: ignore[override]
         version: int | None = None,
     ) -> Iterator[str]:
-        """
-        Iterate keys matching pattern across all primary nodes.
+        """Iterate keys matching pattern across all primary nodes.
 
         In cluster mode, SCAN only operates on the connected node.
         This method scans all primary nodes in the cluster.
@@ -265,8 +255,7 @@ class ClusterClient(DefaultClient):
         client: RedisCluster | None = None,  # type: ignore[override]
         itersize: int | None = None,
     ) -> int:
-        """
-        Remove all keys matching pattern across all primary nodes.
+        """Remove all keys matching pattern across all primary nodes.
 
         In cluster mode, SCAN only operates on the connected node.
         This method scans all primary nodes and groups deletions by slot.
@@ -295,7 +284,7 @@ class ClusterClient(DefaultClient):
             total_deleted = 0
             for slot_keys in slots.values():
                 total_deleted += cast("int", client.delete(*slot_keys))
-
-            return total_deleted
         except Exception as e:
             raise ConnectionInterrupted(connection=client) from e
+        else:
+            return total_deleted

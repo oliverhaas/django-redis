@@ -68,6 +68,7 @@ def _start_cluster_container(base_port: int) -> ContainerInfo:
 
     Args:
         base_port: Starting port for cluster nodes (e.g., 7000 -> ports 7000-7005)
+
     """
     container = DockerContainer(REDIS_CLUSTER_IMAGE)
     # Bind to 0.0.0.0 so cluster nodes are accessible from host

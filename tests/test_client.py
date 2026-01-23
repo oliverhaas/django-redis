@@ -11,7 +11,7 @@ from django_redis.client import DefaultClient
 from tests.settings_wrapper import SettingsWrapper
 
 
-@pytest.fixture()
+@pytest.fixture
 def cache_client(cache: RedisCache) -> Iterable[DefaultClient]:
     client = cache.client
     client.set("TestClientClose", 0)

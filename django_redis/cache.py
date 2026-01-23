@@ -25,11 +25,9 @@ def omit_exception(
     method: Callable | None = None,
     return_value: Any | None = None,
 ):
-    """
-    Simple decorator that intercepts connection
+    """Simple decorator that intercepts connection
     errors and ignores these if settings specify this.
     """
-
     if method is None:
         return functools.partial(omit_exception, return_value=return_value)
 
@@ -84,9 +82,7 @@ class RedisCache(BaseCache):
 
     @property
     def client(self):
-        """
-        Lazy client connection property.
-        """
+        """Lazy client connection property."""
         if self._client is None:
             self._client = self._client_cls(self._server, self._params, self)
         return self._client

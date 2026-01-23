@@ -195,6 +195,7 @@ class ListMixin(ClientProtocol):
 
         Returns:
             The length of the list after insert, or -1 if pivot not found.
+
         """
         if client is None:
             client = self.get_client(write=True)
@@ -224,6 +225,7 @@ class ListMixin(ClientProtocol):
 
         Returns:
             Index, list of indices (if count set), or None if not found.
+
         """
         if client is None:
             client = self.get_client(write=False)
@@ -254,6 +256,7 @@ class ListMixin(ClientProtocol):
 
         Returns:
             The element being moved, or None if source is empty.
+
         """
         if client is None:
             client = self.get_client(write=True)

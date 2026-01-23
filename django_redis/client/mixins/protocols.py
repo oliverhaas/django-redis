@@ -5,8 +5,7 @@ from redis.typing import KeyT
 
 
 class ClientProtocol(Protocol):
-    """
-    Protocol for client methods required by mixins.
+    """Protocol for client methods required by mixins.
 
     Any class using django-redis mixins must implement these methods.
     """
