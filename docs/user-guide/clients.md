@@ -81,6 +81,7 @@ CACHES = {
 
 !!! note "Cluster Behavior"
     - The cluster handles routing to the correct node automatically
-    - Multi-key operations (mget, delete_many, etc.) require all keys to hash to the same slot
-    - Use hash tags like `{prefix}key` to ensure keys go to the same slot
+    - Multi-key operations (`get_many`, `delete_many`, `set_many`) are cluster-aware and handle cross-slot keys automatically by grouping operations
+    - Use hash tags like `{prefix}key` to ensure related keys go to the same slot for better performance
     - Automatic failover is handled by the cluster
+    - `clear()` flushes all primary nodes in the cluster
