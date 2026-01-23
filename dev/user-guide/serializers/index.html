@@ -573,6 +573,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#serializer-fallback-migration-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Serializer Fallback (Migration Support)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Serializer Fallback (Migration Support)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#migration-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migration Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How It Works
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#custom-serializer" class="md-nav__link">
     <span class="md-ellipsis">
       Custom Serializer
@@ -804,6 +837,39 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#serializer-fallback-migration-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Serializer Fallback (Migration Support)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Serializer Fallback (Migration Support)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#migration-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Migration Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How It Works
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#custom-serializer" class="md-nav__link">
     <span class="md-ellipsis">
       Custom Serializer
@@ -885,29 +951,78 @@
 </span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="p">}</span>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">}</span>
 </span></code></pre></div>
+<h2 id="serializer-fallback-migration-support">Serializer Fallback (Migration Support)<a class="headerlink" href="#serializer-fallback-migration-support" title="Permanent link">&para;</a></h2>
+<p>When migrating from one serializer to another, you can specify a list of serializers.
+The first serializer is used for writing new data, while all serializers are tried
+in order when reading until one succeeds.</p>
+<p>This allows safe migration between serialization formats without data loss:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">CACHES</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.cache.RedisCache&quot;</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="s2">&quot;LOCATION&quot;</span><span class="p">:</span> <span class="s2">&quot;redis://127.0.0.1:6379/1&quot;</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>            <span class="c1"># First serializer used for writing, all tried for reading</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>            <span class="s2">&quot;SERIALIZER&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>                <span class="s2">&quot;django_redis.serializers.json.JSONSerializer&quot;</span><span class="p">,</span>  <span class="c1"># New format</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>                <span class="s2">&quot;django_redis.serializers.pickle.PickleSerializer&quot;</span><span class="p">,</span>  <span class="c1"># Old format</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>            <span class="p">],</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>        <span class="p">}</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="p">}</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="migration-example">Migration Example<a class="headerlink" href="#migration-example" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Before migration</strong> - using pickle:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="s2">&quot;SERIALIZER&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.serializers.pickle.PickleSerializer&quot;</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>During migration</strong> - write JSON, read both:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="s2">&quot;SERIALIZER&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="s2">&quot;django_redis.serializers.json.JSONSerializer&quot;</span><span class="p">,</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="s2">&quot;django_redis.serializers.pickle.PickleSerializer&quot;</span><span class="p">,</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">]</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>After migration</strong> - all data refreshed with JSON:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="s2">&quot;SERIALIZER&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.serializers.json.JSONSerializer&quot;</span>
+</span></code></pre></div></p>
+</li>
+</ol>
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<p>When deserializing, each serializer is tried in order. If deserialization fails,
+the next serializer is tried. This continues until one succeeds or all fail.</p>
 <h2 id="custom-serializer">Custom Serializer<a class="headerlink" href="#custom-serializer" title="Permanent link">&para;</a></h2>
 <p>Create a custom serializer by implementing <code>dumps</code> and <code>loads</code> methods:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_redis.serializers.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSerializer</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">MySerializer</span><span class="p">(</span><span class="n">BaseSerializer</span><span class="p">):</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">dumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="c1"># Convert value to bytes</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="k">return</span> <span class="n">my_encode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">loads</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>        <span class="c1"># Convert bytes to value</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>        <span class="k">return</span> <span class="n">my_decode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_redis.serializers.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSerializer</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">django_redis.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">SerializerError</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">MySerializer</span><span class="p">(</span><span class="n">BaseSerializer</span><span class="p">):</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">dumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        <span class="c1"># Convert value to bytes</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>        <span class="k">return</span> <span class="n">my_encode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">loads</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>        <span class="c1"># Convert bytes to value</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>            <span class="k">return</span> <span class="n">my_decode</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>        <span class="k">except</span> <span class="n">MyDecodeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>            <span class="k">raise</span> <span class="n">SerializerError</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
 </span></code></pre></div>
+<p><strong>Note:</strong> Custom serializers should raise <code>SerializerError</code> on deserialization failure
+to enable proper fallback behavior when using multiple serializers.</p>
 <p>Then configure:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">CACHES</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.cache.RedisCache&quot;</span><span class="p">,</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>        <span class="s2">&quot;LOCATION&quot;</span><span class="p">:</span> <span class="s2">&quot;redis://127.0.0.1:6379/1&quot;</span><span class="p">,</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>        <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>            <span class="s2">&quot;SERIALIZER&quot;</span><span class="p">:</span> <span class="s2">&quot;myapp.serializers.MySerializer&quot;</span><span class="p">,</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        <span class="p">}</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="p">}</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">CACHES</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.cache.RedisCache&quot;</span><span class="p">,</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>        <span class="s2">&quot;LOCATION&quot;</span><span class="p">:</span> <span class="s2">&quot;redis://127.0.0.1:6379/1&quot;</span><span class="p">,</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>        <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>            <span class="s2">&quot;SERIALIZER&quot;</span><span class="p">:</span> <span class="s2">&quot;myapp.serializers.MySerializer&quot;</span><span class="p">,</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>        <span class="p">}</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="p">}</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">}</span>
 </span></code></pre></div>
 
 
