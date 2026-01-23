@@ -852,9 +852,10 @@
 <p class="admonition-title">Cluster Behavior</p>
 <ul>
 <li>The cluster handles routing to the correct node automatically</li>
-<li>Multi-key operations (mget, delete_many, etc.) require all keys to hash to the same slot</li>
-<li>Use hash tags like <code>{prefix}key</code> to ensure keys go to the same slot</li>
+<li>Multi-key operations (<code>get_many</code>, <code>delete_many</code>, <code>set_many</code>) are cluster-aware and handle cross-slot keys automatically by grouping operations</li>
+<li>Use hash tags like <code>{prefix}key</code> to ensure related keys go to the same slot for better performance</li>
 <li>Automatic failover is handled by the cluster</li>
+<li><code>clear()</code> flushes all primary nodes in the cluster</li>
 </ul>
 </div>
 
