@@ -76,7 +76,10 @@ Features and changes we want to make.
   - Added cast() for redis-py type annotations
   - Created types.py with type aliases (KeyT, TimeoutT, EncodedT, protocols)
   - Proper type signatures on cache.py methods
-- [ ] Enable more ruff rules (disable/exclude instead of explicit enable, like django-nested-values)
+- [x] Enable more ruff rules (disable/exclude instead of explicit enable, like django-nested-values)
+  - Using `select = ["ALL"]` with minimal ignores
+  - Per-file ignores for source code and tests
+  - Fixed code quality issues: ClassVar, __slots__, dict comprehensions, etc.
 - [x] Stricter mypy configuration
   - Enabled error codes: return-value, union-attr, operator, misc
   - Still disabled due to redis-py: arg-type (key types), assignment (Redis/RedisCluster), type-var (zadd)
