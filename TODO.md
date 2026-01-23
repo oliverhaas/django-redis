@@ -21,6 +21,21 @@ Features and changes we want to make.
   - Branch: `refactor/fix-hash-method-parameters`, `refactor/rename-name-to-key`
 - [ ] Use Python 3.14 builtin zstd when available (with backport fallback)
 
+## Compression & Serialization
+
+- [ ] Multiple compressor fallback for backwards compatibility on read
+  - e.g., `["zstd", None]` tries zstd first, falls back to uncompressed
+  - Allows safe migration when changing compression settings
+  - Same pattern for serializers (e.g., migrate from pickle to msgpack)
+- [ ] Conditional compression based on value size
+  - Only compress values above a threshold (e.g., 1KB)
+  - With fallback list like `["zstd", None]`, reading works reliably
+  - Alternative: detect compression by inspecting value (magic bytes, length heuristics)
+- [ ] Benchmarks for compression/serialization overhead
+  - Measure latency impact of different compressors
+  - Find optimal threshold for conditional compression
+  - Compare serializer performance (pickle vs msgpack vs json)
+
 ## Client Architecture
 
 - [ ] Add ClusterClient for Redis Cluster support
