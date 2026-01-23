@@ -80,8 +80,5 @@ jobs:
         if: matrix.redis-py-version == 'master'
         run: uv pip install "redis @ git+https://github.com/redis/redis-py.git@master"
 
-      - name: Start Redis with Docker Compose
-        run: docker compose -f docker/docker-compose.yml up -d --wait
-
       - name: Run tests
         run: uv run pytest -n auto

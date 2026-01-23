@@ -55,6 +55,7 @@ dev = [
   "pytest-xdist==3.8.0",
   "pyzstd==0.19.1",
   "ruff==0.14.13",
+  "testcontainers==4.14.0",
 ]
 docs = ["mkdocs==1.6.1", "mkdocs-material==9.6.3", "mike==2.1.3"]
 
@@ -108,21 +109,29 @@ select = [
   "YTT",    # flake8-2020
 ]
 ignore = [
-  "S311",  # Standard pseudo-random generators (not cryptographic)
+  "S311", # Standard pseudo-random generators (not cryptographic)
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = ["S101"]  # Allow assert in tests
-"tests/settings/*.py" = ["S105"]  # Allow hardcoded passwords in test settings
-"django_redis/serializers/pickle.py" = ["A005", "S301"]  # Pickle is intentional
-"django_redis/serializers/json.py" = ["A005"]  # Intentionally named to match format
-"django_redis/compressors/gzip.py" = ["A005"]  # Intentionally named to match format
-"django_redis/compressors/lzma.py" = ["A005"]  # Intentionally named to match format
-"django_redis/compressors/zlib.py" = ["A005"]  # Intentionally named to match format
-"django_redis/client/mixins/sorted_sets.py" = ["A002"]  # min/max match Redis API
+"tests/*.py" = ["S101"] # Allow assert in tests
+"tests/settings/*.py" = ["S105"] # Allow hardcoded passwords in test settings
+"django_redis/serializers/pickle.py" = ["A005", "S301"] # Pickle is intentional
+"django_redis/serializers/json.py" = [
+  "A005",
+] # Intentionally named to match format
+"django_redis/compressors/gzip.py" = [
+  "A005",
+] # Intentionally named to match format
+"django_redis/compressors/lzma.py" = [
+  "A005",
+] # Intentionally named to match format
+"django_redis/compressors/zlib.py" = [
+  "A005",
+] # Intentionally named to match format
+"django_redis/client/mixins/sorted_sets.py" = ["A002"] # min/max match Redis API
 
 [tool.mypy]
 python_version = "3.13"
@@ -134,7 +143,15 @@ warn_redundant_casts = true
 # Temporarily loosened - full type annotations on TODO list
 warn_unused_ignores = false
 warn_unreachable = false
-disable_error_code = ["arg-type", "union-attr", "type-var", "return-value", "assignment", "operator", "misc"]
+disable_error_code = [
+  "arg-type",
+  "union-attr",
+  "type-var",
+  "return-value",
+  "assignment",
+  "operator",
+  "misc",
+]
 
 [tool.django-stubs]
 django_settings_module = "tests.settings.sqlite"
@@ -156,6 +173,7 @@ module = "msgpack"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "settings.base"
 addopts = "--cov=django_redis --cov-report=term-missing --no-cov-on-fail"
 pythonpath = ["tests"]
 testpaths = ["tests"]

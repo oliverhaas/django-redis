@@ -1,23 +1,21 @@
-"""Pytest configuration for django-redis tests."""
+"""Test fixtures for django-redis."""
 
-import sys
-from pathlib import Path
-
-from tests.fixtures import (
+from tests.fixtures.cache import (
     cache,
     client_class,
     compressors,
+    sentinel_mode,
+    serializers,
+)
+from tests.fixtures.containers import (
     redis_container,
     redis_container_factory,
     redis_images,
     sentinel_container,
     sentinel_container_factory,
-    sentinel_mode,
-    serializers,
-    settings,
 )
+from tests.fixtures.settings import settings
 
-# Re-export fixtures so pytest can discover them
 __all__ = [
     "cache",
     "client_class",
@@ -31,8 +29,3 @@ __all__ = [
     "serializers",
     "settings",
 ]
-
-
-def pytest_configure(config):
-    """Add tests directory to Python path."""
-    sys.path.insert(0, str(Path(__file__).absolute().parent))
