@@ -1,14 +1,10 @@
-import builtins
 import random
 import re
 import socket
 from collections import OrderedDict
 from collections.abc import Iterable, Iterator
 from contextlib import suppress
-from typing import (
-    Any,
-    cast,
-)
+from typing import Any
 
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache, get_key_func
@@ -18,10 +14,10 @@ from redis import Redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from redis.exceptions import TimeoutError as RedisTimeoutError
-from redis.typing import AbsExpiryT, EncodableT, ExpiryT, KeyT, PatternT
+from redis.typing import AbsExpiryT, EncodableT, ExpiryT, KeyT
 
 from django_redis import pool
-from django_redis.client.mixins import SortedSetMixin
+from django_redis.client.mixins import HashMixin, ListMixin, SetMixin, SortedSetMixin
 from django_redis.exceptions import CompressorError, ConnectionInterrupted
 from django_redis.util import CacheKey
 
@@ -39,7 +35,7 @@ def glob_escape(s: str) -> str:
     return special_re.sub(r"[\1]", s)
 
 
-class DefaultClient(SortedSetMixin):
+class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
     def __init__(self, server, params: dict[str, Any], backend: BaseCache) -> None:
         self._backend = backend
         self._server = server
@@ -521,12 +517,12 @@ class DefaultClient(SortedSetMixin):
     def _decode_iterable_result(
         self,
         result: Any,
-        covert_to_set: bool = True,
+        convert_to_set: bool = True,
     ) -> list[Any] | None | Any:
         if result is None:
             return None
         if isinstance(result, list):
-            if covert_to_set:
+            if convert_to_set:
                 return {self.decode(value) for value in result}
             return [self.decode(value) for value in result]
         return self.decode(result)
@@ -829,257 +825,6 @@ class DefaultClient(SortedSetMixin):
 
         return CacheKey(self._backend.key_func(pattern, prefix, version_str))
 
-    def sadd(
-        self,
-        key: KeyT,
-        *values: Any,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        if client is None:
-            client = self.get_client(write=True)
-
-        key = self.make_key(key, version=version)
-        encoded_values = [self.encode(value) for value in values]
-        return int(client.sadd(key, *encoded_values))
-
-    def scard(
-        self,
-        key: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        if client is None:
-            client = self.get_client(write=False)
-
-        key = self.make_key(key, version=version)
-        return int(client.scard(key))
-
-    def sdiff(
-        self,
-        *keys: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> builtins.set[Any]:
-        if client is None:
-            client = self.get_client(write=False)
-
-        nkeys = [self.make_key(key, version=version) for key in keys]
-        return {self.decode(value) for value in client.sdiff(*nkeys)}
-
-    def sdiffstore(
-        self,
-        dest: KeyT,
-        *keys: KeyT,
-        version_dest: int | None = None,
-        version_keys: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        if client is None:
-            client = self.get_client(write=True)
-
-        dest = self.make_key(dest, version=version_dest)
-        nkeys = [self.make_key(key, version=version_keys) for key in keys]
-        return int(client.sdiffstore(dest, *nkeys))
-
-    def sinter(
-        self,
-        *keys: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> builtins.set[Any]:
-        if client is None:
-            client = self.get_client(write=False)
-
-        nkeys = [self.make_key(key, version=version) for key in keys]
-        return {self.decode(value) for value in client.sinter(*nkeys)}
-
-    def sinterstore(
-        self,
-        dest: KeyT,
-        *keys: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        if client is None:
-            client = self.get_client(write=True)
-
-        dest = self.make_key(dest, version=version)
-        nkeys = [self.make_key(key, version=version) for key in keys]
-        return int(client.sinterstore(dest, *nkeys))
-
-    def smismember(
-        self,
-        key: KeyT,
-        *members,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> list[bool]:
-        if client is None:
-            client = self.get_client(write=False)
-
-        key = self.make_key(key, version=version)
-        encoded_members = [self.encode(member) for member in members]
-
-        return [bool(value) for value in client.smismember(key, *encoded_members)]
-
-    def sismember(
-        self,
-        key: KeyT,
-        member: Any,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> bool:
-        if client is None:
-            client = self.get_client(write=False)
-
-        key = self.make_key(key, version=version)
-        member = self.encode(member)
-        return bool(client.sismember(key, member))
-
-    def smembers(
-        self,
-        key: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> builtins.set[Any]:
-        if client is None:
-            client = self.get_client(write=False)
-
-        key = self.make_key(key, version=version)
-        return {self.decode(value) for value in client.smembers(key)}
-
-    def smove(
-        self,
-        source: KeyT,
-        destination: KeyT,
-        member: Any,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> bool:
-        if client is None:
-            client = self.get_client(write=True)
-
-        source = self.make_key(source, version=version)
-        destination = self.make_key(destination)
-        member = self.encode(member)
-        return bool(client.smove(source, destination, member))
-
-    def spop(
-        self,
-        key: KeyT,
-        count: int | None = None,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> builtins.set | Any:
-        if client is None:
-            client = self.get_client(write=True)
-
-        nkey = self.make_key(key, version=version)
-        result = client.spop(nkey, count)
-        return self._decode_iterable_result(result)
-
-    def srandmember(
-        self,
-        key: KeyT,
-        count: int | None = None,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> list | Any:
-        if client is None:
-            client = self.get_client(write=False)
-
-        key = self.make_key(key, version=version)
-        result = client.srandmember(key, count)
-        return self._decode_iterable_result(result, covert_to_set=False)
-
-    def srem(
-        self,
-        key: KeyT,
-        *members: EncodableT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        if client is None:
-            client = self.get_client(write=True)
-
-        key = self.make_key(key, version=version)
-        nmembers = [self.encode(member) for member in members]
-        return int(client.srem(key, *nmembers))
-
-    def sscan(
-        self,
-        key: KeyT,
-        match: str | None = None,
-        count: int | None = 10,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> builtins.set[Any]:
-        if self._has_compression_enabled() and match:
-            err_msg = "Using match with compression is not supported."
-            raise ValueError(err_msg)
-
-        if client is None:
-            client = self.get_client(write=False)
-
-        key = self.make_key(key, version=version)
-
-        cursor, result = client.sscan(
-            key,
-            match=cast("PatternT", self.encode(match)) if match else None,
-            count=count,
-        )
-        return {self.decode(value) for value in result}
-
-    def sscan_iter(
-        self,
-        key: KeyT,
-        match: str | None = None,
-        count: int | None = 10,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> Iterator[Any]:
-        if self._has_compression_enabled() and match:
-            err_msg = "Using match with compression is not supported."
-            raise ValueError(err_msg)
-
-        if client is None:
-            client = self.get_client(write=False)
-
-        key = self.make_key(key, version=version)
-        for value in client.sscan_iter(
-            key,
-            match=cast("PatternT", self.encode(match)) if match else None,
-            count=count,
-        ):
-            yield self.decode(value)
-
-    def sunion(
-        self,
-        *keys: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> builtins.set[Any]:
-        if client is None:
-            client = self.get_client(write=False)
-
-        nkeys = [self.make_key(key, version=version) for key in keys]
-        return {self.decode(value) for value in client.sunion(*nkeys)}
-
-    def sunionstore(
-        self,
-        destination: Any,
-        *keys: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        if client is None:
-            client = self.get_client(write=True)
-
-        destination = self.make_key(destination, version=version)
-        encoded_keys = [self.make_key(key, version=version) for key in keys]
-        return int(client.sunionstore(destination, *encoded_keys))
-
     def close(self) -> None:
         close_flag = self._options.get(
             "CLOSE_CONNECTION",
@@ -1121,83 +866,3 @@ class DefaultClient(SortedSetMixin):
         # Convert to milliseconds
         timeout = int(timeout * 1000)
         return bool(client.pexpire(key, timeout))
-
-    def hset(
-        self,
-        key: KeyT,
-        field: str,
-        value: EncodableT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        """
-        Set the value of a field in hash at key.
-        Returns the number of fields added to the hash.
-        """
-        if client is None:
-            client = self.get_client(write=True)
-        nkey = self.make_key(key, version=version)
-        nvalue = self.encode(value)
-        return int(client.hset(nkey, field, nvalue))
-
-    def hdel(
-        self,
-        key: KeyT,
-        field: str,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        """
-        Remove a field from hash at key.
-        Returns the number of fields deleted from the hash.
-        """
-        if client is None:
-            client = self.get_client(write=True)
-        nkey = self.make_key(key, version=version)
-        return int(client.hdel(nkey, field))
-
-    def hlen(
-        self,
-        key: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> int:
-        """
-        Return the number of fields in hash at key.
-        """
-        if client is None:
-            client = self.get_client(write=False)
-        nkey = self.make_key(key, version=version)
-        return int(client.hlen(nkey))
-
-    def hkeys(
-        self,
-        key: KeyT,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> list[str]:
-        """
-        Return a list of fields in hash at key.
-        """
-        if client is None:
-            client = self.get_client(write=False)
-        nkey = self.make_key(key, version=version)
-        try:
-            return [k.decode() for k in client.hkeys(nkey)]
-        except _main_exceptions as e:
-            raise ConnectionInterrupted(connection=client) from e
-
-    def hexists(
-        self,
-        key: KeyT,
-        field: str,
-        version: int | None = None,
-        client: Redis | None = None,
-    ) -> bool:
-        """
-        Return True if field exists in hash at key, else False.
-        """
-        if client is None:
-            client = self.get_client(write=False)
-        nkey = self.make_key(key, version=version)
-        return bool(client.hexists(nkey, field))
