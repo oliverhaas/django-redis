@@ -41,11 +41,13 @@ Features and changes we want to make.
 ## Client Architecture
 
 - [x] Add ClusterClient for Redis Cluster support
-  - ClusterClient subclasses DefaultClient, overrides `get_next_client_index()` and `connect()`
+  - ClusterClient subclasses DefaultClient
   - ClusterConnectionFactory using `redis.cluster.RedisCluster`
-  - Unit tests for ClusterClient and ClusterConnectionFactory
-  - Note: Multi-key ops (mget, set_many, delete_many) need hash tags `{prefix}key` for same-slot routing
-  - TODO: Add cluster integration tests with testcontainers when needed
+  - Multi-key ops (`get_many`, `delete_many`, `set_many`) handle cross-slot keys by grouping
+  - Key iteration (`keys`, `iter_keys`, `delete_pattern`) scans all primary nodes
+  - `clear()` flushes all primary nodes
+  - 30 unit tests for ClusterClient and ClusterConnectionFactory
+  - Note: Hash tags `{prefix}key` still recommended for performance (fewer round-trips)
 - [x] Remove ShardClient (obsolete client-side sharding from pre-Cluster era)
 - [x] Remove HerdClient (thundering herd protection)
   - Complex implementation that packed timeout with value
