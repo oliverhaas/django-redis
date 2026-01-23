@@ -15,10 +15,13 @@ Features and changes we want to make.
 - [ ] Add async Django cache interface (official Django async cache API)
   - Branch: `feat/async-support`
 - [ ] Add async API for all other methods
-- [ ] Add more Redis method support (everything commonly used)
-  - Branches: `feat/list-methods-mixin`, `feat/list-operations-mixin`
-  - Branches: `refactor/hash-operations-mixin`, `refactor/set-methods-mixin`, `refactor/set-operations-mixin`
-  - Branch: `refactor/fix-hash-method-parameters`, `refactor/rename-name-to-key`
+- [x] Add more Redis method support via mixins
+  - ListMixin: lpush, rpush, lpop, rpop, lrange, lindex, llen, lrem, ltrim, lset, linsert
+  - SetMixin: sadd, scard, sdiff, sdiffstore, sinter, sinterstore, sismember, smembers, smove, spop, srandmember, srem, sscan, sscan_iter, sunion, sunionstore
+  - HashMixin: hset, hdel, hlen, hkeys, hexists
+  - SortedSetMixin: zadd, zcard, zcount, zincrby, zpopmax, zpopmin, zrange, zrangebyscore, zrank, zrem, zremrangebyscore, zrevrange, zrevrangebyscore, zscore
+  - Fixed hash method parameter semantics (key/field vs name/key)
+- [ ] Add more methods to existing mixins as needed (hget, hgetall, lpos, etc.)
 - [ ] Use Python 3.14 builtin zstd when available (with backport fallback)
 
 ## Compression & Serialization
@@ -40,7 +43,10 @@ Features and changes we want to make.
 
 - [ ] Add ClusterClient for Redis Cluster support
   - Native Redis Cluster (since Redis 3.0, 2015) uses server-side sharding
-  - Should use redis-py's RedisCluster client
+  - Subclass DefaultClient, override `get_next_client_index()` (return 0) and `connect()` (validate RedisCluster)
+  - Add ClusterConnectionFactory using `redis.cluster.RedisCluster`
+  - Multi-key ops (mget, set_many, delete_many) need hash tags `{prefix}key` for same-slot
+  - Add cluster container (bitnami/redis-cluster, 3 nodes) to testcontainers fixtures
 - [x] Remove ShardClient (obsolete client-side sharding from pre-Cluster era)
 - [x] Remove HerdClient (thundering herd protection)
   - Complex implementation that packed timeout with value
