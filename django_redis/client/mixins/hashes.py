@@ -114,7 +114,7 @@ class HashMixin(ClientProtocol):
         key: KeyT,
         version: int | None = None,
         client: Redis | None = None,
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """Get all fields and values in hash at key."""
         if client is None:
             client = self.get_client(write=False)
@@ -128,7 +128,7 @@ class HashMixin(ClientProtocol):
         *fields: str,
         version: int | None = None,
         client: Redis | None = None,
-    ) -> list[any]:
+    ) -> list[Any]:
         """Get values of multiple fields in hash at key."""
         if client is None:
             client = self.get_client(write=False)
@@ -198,7 +198,7 @@ class HashMixin(ClientProtocol):
         key: KeyT,
         version: int | None = None,
         client: Redis | None = None,
-    ) -> list[any]:
+    ) -> list[Any]:
         """Get all values in hash at key."""
         if client is None:
             client = self.get_client(write=False)

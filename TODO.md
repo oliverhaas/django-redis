@@ -40,12 +40,12 @@ Features and changes we want to make.
 
 ## Client Architecture
 
-- [ ] Add ClusterClient for Redis Cluster support
-  - Native Redis Cluster (since Redis 3.0, 2015) uses server-side sharding
-  - Subclass DefaultClient, override `get_next_client_index()` (return 0) and `connect()` (validate RedisCluster)
-  - Add ClusterConnectionFactory using `redis.cluster.RedisCluster`
-  - Multi-key ops (mget, set_many, delete_many) need hash tags `{prefix}key` for same-slot
-  - Add cluster container (bitnami/redis-cluster, 3 nodes) to testcontainers fixtures
+- [x] Add ClusterClient for Redis Cluster support
+  - ClusterClient subclasses DefaultClient, overrides `get_next_client_index()` and `connect()`
+  - ClusterConnectionFactory using `redis.cluster.RedisCluster`
+  - Unit tests for ClusterClient and ClusterConnectionFactory
+  - Note: Multi-key ops (mget, set_many, delete_many) need hash tags `{prefix}key` for same-slot routing
+  - TODO: Add cluster integration tests with testcontainers when needed
 - [x] Remove ShardClient (obsolete client-side sharding from pre-Cluster era)
 - [x] Remove HerdClient (thundering herd protection)
   - Complex implementation that packed timeout with value

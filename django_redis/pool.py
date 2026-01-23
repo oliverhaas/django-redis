@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 from redis import Redis
+from redis.cluster import RedisCluster
 from redis.connection import ConnectionPool, DefaultParser, to_bool
 from redis.sentinel import Sentinel
 
@@ -188,6 +189,68 @@ class SentinelConnectionFactory(ConnectionFactory):
         )
 
         return super().get_connection_pool(cp_params)
+
+
+class ClusterConnectionFactory:
+    """
+    Connection factory for Redis Cluster.
+
+    Redis Cluster manages its own connection pool internally, so this factory
+    creates and caches RedisCluster instances directly.
+    """
+
+    _clusters: dict[str, RedisCluster] = {}
+
+    def __init__(self, options):
+        self.options = options
+        self.redis_client_cls_kwargs = options.get("REDIS_CLIENT_KWARGS", {})
+
+    def make_connection_params(self, url: str) -> dict:
+        """Build connection parameters from URL and options."""
+        kwargs: dict = {}
+
+        # Parse the URL to extract host and port
+        parsed = urlparse(url)
+        if parsed.hostname:
+            kwargs["host"] = parsed.hostname
+        if parsed.port:
+            kwargs["port"] = parsed.port
+
+        password = self.options.get("PASSWORD", None)
+        if password:
+            kwargs["password"] = password
+
+        socket_timeout = self.options.get("SOCKET_TIMEOUT", None)
+        if socket_timeout:
+            if not isinstance(socket_timeout, int | float):
+                error_message = "Socket timeout should be float or integer"
+                raise ImproperlyConfigured(error_message)
+            kwargs["socket_timeout"] = socket_timeout
+
+        socket_connect_timeout = self.options.get("SOCKET_CONNECT_TIMEOUT", None)
+        if socket_connect_timeout:
+            if not isinstance(socket_connect_timeout, int | float):
+                error_message = "Socket connect timeout should be float or integer"
+                raise ImproperlyConfigured(error_message)
+            kwargs["socket_connect_timeout"] = socket_connect_timeout
+
+        return kwargs
+
+    def connect(self, url: str) -> RedisCluster:
+        """Connect to a Redis Cluster."""
+        if url in self._clusters:
+            return self._clusters[url]
+
+        params = self.make_connection_params(url)
+        params.update(self.redis_client_cls_kwargs)
+
+        cluster = RedisCluster(**params)
+        self._clusters[url] = cluster
+        return cluster
+
+    def disconnect(self, connection: RedisCluster) -> None:
+        """Disconnect from a Redis Cluster."""
+        connection.close()
 
 
 def get_connection_factory(path=None, options=None):
