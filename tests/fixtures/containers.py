@@ -17,7 +17,9 @@ DEFAULT_REDIS_IMAGE = "redis:latest"
 # Redis Cluster image (runs 6 nodes in single container: 3 masters + 3 replicas)
 # See: https://github.com/Grokzen/docker-redis-cluster
 REDIS_CLUSTER_IMAGE = "grokzen/redis-cluster:7.0.10"
-CLUSTER_PORTS = list(range(7000, 7006))  # Ports 7000-7005
+CLUSTER_NODE_COUNT = 6  # 3 masters + 3 replicas
+CLUSTER_BASE_PORT = 7000  # Default starting port
+CLUSTER_PORT_SPACING = 10  # Gap between worker port ranges for xdist
 
 
 class ContainerInfo(NamedTuple):
@@ -49,25 +51,39 @@ def _start_redis_container(image: str) -> ContainerInfo:
     )
 
 
-def _start_cluster_container() -> ContainerInfo:
+def _get_xdist_worker_id() -> int:
+    """Get the xdist worker ID from environment, or 0 if not running under xdist."""
+    worker = environ.get("PYTEST_XDIST_WORKER", "")
+    if worker.startswith("gw"):
+        return int(worker[2:])
+    return 0
+
+
+def _start_cluster_container(base_port: int) -> ContainerInfo:
     """Start a Redis Cluster container (grokzen/redis-cluster).
 
     This image runs 6 Redis nodes (3 masters + 3 replicas) in a single container.
-    Ports 7000-7005 must be bound to fixed ports because Redis Cluster uses
-    gossip protocol where nodes announce their IPs and ports to clients.
+    Ports must be bound to fixed ports because Redis Cluster uses gossip protocol
+    where nodes announce their IPs and ports to clients.
+
+    Args:
+        base_port: Starting port for cluster nodes (e.g., 7000 -> ports 7000-7005)
     """
     container = DockerContainer(REDIS_CLUSTER_IMAGE)
     # Bind to 0.0.0.0 so cluster nodes are accessible from host
     container.with_env("IP", "0.0.0.0")  # noqa: S104
+    # Set the starting port for cluster nodes
+    container.with_env("INITIAL_PORT", str(base_port))
     # Use fixed port bindings (required for cluster gossip to work)
-    for port in CLUSTER_PORTS:
+    for i in range(CLUSTER_NODE_COUNT):
+        port = base_port + i
         container.with_bind_ports(port, port)
     container.start()
     # Wait for cluster to be ready
     wait_for_logs(container, "Cluster state changed: ok")
     return ContainerInfo(
         host=container.get_container_host_ip(),
-        port=7000,  # First master node
+        port=base_port,  # First master node
         container=container,
     )
 
@@ -187,14 +203,17 @@ def cluster_container_factory() -> Generator[tuple[ContainerFactory, ContainerIn
     """Session-scoped factory for Redis Cluster container.
 
     Returns a factory function and the cached container info.
-    The cluster uses fixed ports 7000-7005 (required for gossip protocol).
+    Uses dynamic port allocation based on xdist worker ID to allow parallel runs.
     """
     cached_info: list[ContainerInfo | None] = [None]
 
     def get_container(_image: str = "") -> tuple[str, int]:
         # Image parameter ignored - cluster always uses grokzen/redis-cluster
         if cached_info[0] is None:
-            cached_info[0] = _start_cluster_container()
+            # Calculate base port from xdist worker ID (gw0 -> 7000, gw1 -> 7010, etc.)
+            worker_id = _get_xdist_worker_id()
+            base_port = CLUSTER_BASE_PORT + (worker_id * CLUSTER_PORT_SPACING)
+            cached_info[0] = _start_cluster_container(base_port)
         info = cached_info[0]
         return info.host, info.port
 
