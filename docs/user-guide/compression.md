@@ -99,7 +99,6 @@ CACHES = {
             "COMPRESSOR": [
                 "django_redis.compressors.zstd.ZStdCompressor",  # New format
                 "django_redis.compressors.gzip.GzipCompressor",  # Old format
-                None,  # Uncompressed data (IdentityCompressor)
             ],
         }
     }
@@ -118,7 +117,6 @@ CACHES = {
    "COMPRESSOR": [
        "django_redis.compressors.zstd.ZStdCompressor",
        "django_redis.compressors.gzip.GzipCompressor",
-       None,
    ]
    ```
 
@@ -131,8 +129,7 @@ CACHES = {
 
 When decompressing, each compressor is tried in order. If decompression fails,
 the next compressor is tried. This continues until one succeeds or all fail.
-
-**Note:** Place `None` (IdentityCompressor) last in the list to handle uncompressed data.
+If all compressors fail, the raw value is returned (allowing uncompressed data to pass through).
 
 ## Compression Comparison
 

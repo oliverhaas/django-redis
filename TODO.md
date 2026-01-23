@@ -30,7 +30,7 @@ Features and changes we want to make.
 ## Compression & Serialization
 
 - [x] Multiple compressor fallback for backwards compatibility on read
-  - List-based COMPRESSOR config: `["path.to.ZstdCompressor", "path.to.GzipCompressor", None]`
+  - List-based COMPRESSOR config: `["path.to.ZstdCompressor", "path.to.GzipCompressor"]`
   - First compressor used for writing, all tried for reading
   - Exception-based fallback: tries each compressor until one succeeds
   - Same pattern could be added for serializers later (e.g., migrate from pickle to msgpack)
