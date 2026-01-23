@@ -15,20 +15,25 @@ Features and changes we want to make.
 - [ ] Add async Django cache interface (official Django async cache API)
   - Branch: `feat/async-support`
 - [ ] Add async API for all other methods
+- [ ] Full compatibility with Django's builtin Redis backend (django.core.cache.backends.redis)
+  - Drop-in replacement with extended functionality
+  - Match configuration options where applicable
 - [x] Add more Redis method support via mixins
   - ListMixin: lpush, rpush, lpop, rpop, lrange, lindex, llen, lrem, ltrim, lset, linsert, lpos, lmove
   - SetMixin: sadd, scard, sdiff, sdiffstore, sinter, sinterstore, sismember, smembers, smove, spop, srandmember, srem, sscan, sscan_iter, sunion, sunionstore
   - HashMixin: hset, hdel, hlen, hkeys, hexists, hget, hgetall, hmget, hmset, hincrby, hincrbyfloat, hsetnx, hvals
   - SortedSetMixin: zadd, zcard, zcount, zincrby, zpopmax, zpopmin, zrange, zrangebyscore, zrank, zrem, zremrangebyscore, zrevrange, zrevrangebyscore, zscore, zrevrank, zmscore, zremrangebyrank
   - Fixed hash method parameter semantics (key/field vs name/key)
-- [ ] Use Python 3.14 builtin zstd when available (with backport fallback)
+- [x] Use Python 3.14 builtin zstd when available (with backport fallback)
+  - Uses `compression.zstd` on Python 3.14+, `backports.zstd` on older versions
 
 ## Compression & Serialization
 
-- [ ] Multiple compressor fallback for backwards compatibility on read
-  - e.g., `["zstd", None]` tries zstd first, falls back to uncompressed
-  - Allows safe migration when changing compression settings
-  - Same pattern for serializers (e.g., migrate from pickle to msgpack)
+- [x] Multiple compressor fallback for backwards compatibility on read
+  - List-based COMPRESSOR config: `["path.to.ZstdCompressor", "path.to.GzipCompressor", None]`
+  - First compressor used for writing, all tried for reading
+  - Magic byte detection enabled by default for efficient format identification
+  - Same pattern could be added for serializers later (e.g., migrate from pickle to msgpack)
 - [ ] Conditional compression based on value size
   - Only compress values above a threshold (e.g., 1KB)
   - With fallback list like `["zstd", None]`, reading works reliably

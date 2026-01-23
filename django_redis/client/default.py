@@ -3,7 +3,6 @@ import re
 import socket
 from collections import OrderedDict
 from collections.abc import Iterable, Iterator
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
@@ -65,28 +64,57 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
         )
         serializer_cls = import_string(serializer_path)
 
-        compressor_path = self._options.get(
+        compressor_config = self._options.get(
             "COMPRESSOR",
             "django_redis.compressors.identity.IdentityCompressor",
         )
-        compressor_cls = import_string(compressor_path)
 
         self._serializer = serializer_cls(options=self._options)
-        self._compressor = compressor_cls(options=self._options)
+        self._compressors = self._create_compressors(compressor_config)
 
         self.connection_factory = pool.get_connection_factory(options=self._options)
 
     def __contains__(self, key: KeyT) -> bool:
         return self.has_key(key)
 
+    def _create_compressors(self, compressor_config: str | list) -> list:
+        """Create compressor instance(s) from config.
+
+        Args:
+            compressor_config: Either a single compressor class path (string)
+                or a list of compressor paths for fallback support.
+
+        Returns:
+            List of compressor instances.
+            - First compressor is used for compression (writing)
+            - All compressors are tried for decompression (reading)
+        """
+        if isinstance(compressor_config, list):
+            compressors = []
+            for path in compressor_config:
+                if path is None:
+                    path = "django_redis.compressors.identity.IdentityCompressor"
+                compressor_cls = import_string(path)
+                compressors.append(compressor_cls(options=self._options))
+            return compressors
+
+        # Single compressor - wrap in list for consistent handling
+        compressor_cls = import_string(compressor_config)
+        return [compressor_cls(options=self._options)]
+
     def _has_compression_enabled(self) -> bool:
-        return (
-            self._options.get(
-                "COMPRESSOR",
+        compressor_config = self._options.get(
+            "COMPRESSOR",
+            "django_redis.compressors.identity.IdentityCompressor",
+        )
+        if isinstance(compressor_config, list):
+            # Check if primary (first) compressor is not identity
+            primary = compressor_config[0] if compressor_config else None
+            return primary not in (
+                None,
                 "django_redis.compressors.identity.IdentityCompressor",
             )
-            != "django_redis.compressors.identity.IdentityCompressor"
-        )
+        return compressor_config != "django_redis.compressors.identity.IdentityCompressor"
 
     def get_next_client_index(
         self,
@@ -501,9 +529,36 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
             value = int(value)
         except (ValueError, TypeError):
             # Handle little values, chosen to be not compressed
-            with suppress(CompressorError):
-                value = self._compressor.decompress(value)
+            value = self._decompress(value)
             value = self._serializer.loads(value)
+        return value
+
+    def _decompress(self, value: bytes) -> bytes:
+        """Decompress a value, with fallback support for multiple compressors.
+
+        Tries each compressor in order:
+        1. Call check() to see if this compressor likely encoded the data
+        2. If check() returns True, try decompress()
+        3. If decompress() fails, continue to next compressor
+        4. If all fail, return original value (serializer will handle it)
+
+        Args:
+            value: Compressed bytes to decompress
+
+        Returns:
+            Decompressed bytes, or original value if decompression fails
+        """
+        for compressor in self._compressors:
+            if not compressor.check(value):
+                continue
+            try:
+                return compressor.decompress(value)
+            except CompressorError:
+                # check() matched but decompress failed (e.g., corrupted data
+                # or data that happens to start with magic bytes)
+                continue
+
+        # All failed - return raw bytes (serializer will handle it)
         return value
 
     def encode(self, value: EncodableT) -> bytes | int:
@@ -513,7 +568,7 @@ class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
 
         if isinstance(value, bool) or not isinstance(value, int):
             value = self._serializer.dumps(value)
-            return self._compressor.compress(value)
+            return self._compressors[0].compress(value)
 
         return value
 
