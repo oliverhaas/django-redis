@@ -38,6 +38,62 @@ django-redis adds these Redis-specific methods:
 | `iter_keys(pattern)` | Iterate keys matching pattern |
 | `delete_pattern(pattern)` | Delete keys matching pattern |
 
+### Hash Methods
+
+Redis hash operations for field-value data structures:
+
+| Method | Description |
+|--------|-------------|
+| `hset(key, field, value)` | Set a hash field value |
+| `hdel(key, *fields)` | Delete hash field(s) |
+| `hexists(key, field)` | Check if hash field exists |
+| `hget(key, field)` | Get a hash field value |
+| `hgetall(key)` | Get all fields and values in a hash |
+| `hincrby(key, field, amount=1)` | Increment hash field by integer |
+| `hincrbyfloat(key, field, amount=1.0)` | Increment hash field by float |
+| `hlen(key)` | Get number of fields in hash |
+| `hmget(key, *fields)` | Get multiple hash field values |
+| `hmset(key, mapping)` | Set multiple hash fields |
+| `hsetnx(key, field, value)` | Set hash field only if it doesn't exist |
+| `hvals(key)` | Get all values in a hash |
+
+### Sorted Set Methods
+
+Redis sorted set operations for scored, ordered collections:
+
+| Method | Description |
+|--------|-------------|
+| `zadd(key, *args, **kwargs)` | Add member(s) with scores |
+| `zcard(key)` | Get number of members |
+| `zcount(key, min, max)` | Count members with scores in range |
+| `zincrby(key, amount, member)` | Increment member's score |
+| `zrange(key, start, end, ...)` | Get members by index range |
+| `zrangebyscore(key, min, max, ...)` | Get members by score range |
+| `zrank(key, member)` | Get member's rank (ascending) |
+| `zrevrank(key, member)` | Get member's rank (descending) |
+| `zrem(key, *members)` | Remove member(s) |
+| `zremrangebyrank(key, start, end)` | Remove members by rank range |
+| `zscore(key, member)` | Get member's score |
+| `zmscore(key, *members)` | Get multiple members' scores |
+
+### List Methods
+
+Redis list operations for ordered, indexable collections:
+
+| Method | Description |
+|--------|-------------|
+| `llen(key)` | Get list length |
+| `lpush(key, *values)` | Prepend value(s) to list |
+| `rpush(key, *values)` | Append value(s) to list |
+| `lpop(key)` | Remove and return first element |
+| `rpop(key)` | Remove and return last element |
+| `lindex(key, index)` | Get element by index |
+| `lrange(key, start, end)` | Get elements in range |
+| `lset(key, index, value)` | Set element at index |
+| `ltrim(key, start, end)` | Trim list to range |
+| `lpos(key, element, ...)` | Find element position in list |
+| `lmove(src, dst, src_side, dst_side)` | Atomically move element between lists |
+
 ### Set Method Options
 
 ```python

@@ -43,3 +43,44 @@ CACHES = {
     },
 }
 ```
+
+## Cluster Client
+
+For Redis Cluster deployments with server-side sharding across multiple nodes:
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:7000",  # Any cluster node
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.ClusterClient",
+            "CONNECTION_FACTORY": "django_redis.pool.ClusterConnectionFactory",
+        }
+    }
+}
+```
+
+With password and timeouts:
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:7000",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.ClusterClient",
+            "CONNECTION_FACTORY": "django_redis.pool.ClusterConnectionFactory",
+            "PASSWORD": "your-password",
+            "SOCKET_TIMEOUT": 5,
+            "SOCKET_CONNECT_TIMEOUT": 3,
+        }
+    }
+}
+```
+
+!!! note "Cluster Behavior"
+    - The cluster handles routing to the correct node automatically
+    - Multi-key operations (mget, delete_many, etc.) require all keys to hash to the same slot
+    - Use hash tags like `{prefix}key` to ensure keys go to the same slot
+    - Automatic failover is handled by the cluster

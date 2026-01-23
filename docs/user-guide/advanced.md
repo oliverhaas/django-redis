@@ -154,6 +154,131 @@ cache.incr("counter", delta=5)  # Returns 6
 cache.decr("counter")  # Returns 5
 ```
 
+## Redis Data Structures
+
+django-redis provides direct access to Redis data structures through the cache interface.
+
+### Hashes
+
+Hashes are maps of field-value pairs, useful for storing objects:
+
+```python
+from django.core.cache import cache
+
+# Set a single field
+cache.hset("user:1", "name", "Alice")
+
+# Set multiple fields at once
+cache.hmset("user:1", {"email": "alice@example.com", "age": 30})
+
+# Get a single field
+name = cache.hget("user:1", "name")  # "Alice"
+
+# Get multiple fields
+values = cache.hmget("user:1", "name", "email")  # ["Alice", "alice@example.com"]
+
+# Get all fields and values
+user = cache.hgetall("user:1")  # {"name": "Alice", "email": "...", "age": 30}
+
+# Increment a numeric field
+cache.hincrby("user:1", "age", 1)  # 31
+cache.hincrbyfloat("user:1", "score", 0.5)  # For floating point
+
+# Check if field exists
+cache.hexists("user:1", "name")  # True
+
+# Delete fields
+cache.hdel("user:1", "age")
+
+# Get count of fields
+cache.hlen("user:1")  # 2
+
+# Get all values
+cache.hvals("user:1")  # ["Alice", "alice@example.com"]
+```
+
+### Sorted Sets
+
+Sorted sets store unique members with scores, automatically sorted by score:
+
+```python
+from django.core.cache import cache
+
+# Add members with scores
+cache.zadd("leaderboard", {"alice": 100, "bob": 85, "charlie": 92})
+
+# Get rank (0-indexed, ascending by score)
+cache.zrank("leaderboard", "alice")  # 2 (highest score = last)
+cache.zrevrank("leaderboard", "alice")  # 0 (highest score = first)
+
+# Get score
+cache.zscore("leaderboard", "bob")  # 85.0
+
+# Get multiple scores
+cache.zmscore("leaderboard", "alice", "bob")  # [100.0, 85.0]
+
+# Increment score
+cache.zincrby("leaderboard", 10, "bob")  # 95.0
+
+# Get range by rank (ascending)
+cache.zrange("leaderboard", 0, -1)  # All members sorted by score
+
+# Get range by rank with scores
+cache.zrange("leaderboard", 0, -1, withscores=True)
+
+# Get range by score
+cache.zrangebyscore("leaderboard", 80, 100)
+
+# Count members in score range
+cache.zcount("leaderboard", 80, 100)  # 3
+
+# Remove members
+cache.zrem("leaderboard", "charlie")
+
+# Remove by rank range
+cache.zremrangebyrank("leaderboard", 0, 1)  # Remove lowest 2
+
+# Get total count
+cache.zcard("leaderboard")
+```
+
+### Lists
+
+Lists are ordered collections of elements:
+
+```python
+from django.core.cache import cache
+
+# Push elements
+cache.lpush("queue", "first")  # Prepend (left)
+cache.rpush("queue", "last")   # Append (right)
+
+# Pop elements
+cache.lpop("queue")  # Remove and return first
+cache.rpop("queue")  # Remove and return last
+
+# Get element by index
+cache.lindex("queue", 0)  # First element
+
+# Get range of elements
+cache.lrange("queue", 0, -1)  # All elements
+
+# Set element at index
+cache.lset("queue", 0, "new_first")
+
+# Trim to range
+cache.ltrim("queue", 0, 99)  # Keep first 100 elements
+
+# Get length
+cache.llen("queue")
+
+# Find element position (Redis 6.0.6+)
+cache.lpos("queue", "target")  # Returns index or None
+
+# Move element between lists atomically (Redis 6.2+)
+cache.lmove("source", "dest", "LEFT", "RIGHT")  # LPOP source, RPUSH dest
+```
+
 ## Raw Client Access
 
 Access the underlying redis-py client:
