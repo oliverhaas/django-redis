@@ -72,10 +72,15 @@ Features and changes we want to make.
 
 ## Code Quality
 
-- [ ] Full type annotations up to Django layer (user-facing typing support)
-  - 73 mypy errors remaining
+- [x] Full type annotations up to Django layer (user-facing typing support)
+  - Added cast() for redis-py type annotations
+  - Created types.py with type aliases (KeyT, TimeoutT, EncodedT, protocols)
+  - Proper type signatures on cache.py methods
 - [ ] Enable more ruff rules (disable/exclude instead of explicit enable, like django-nested-values)
-- [ ] Stricter mypy configuration
+- [x] Stricter mypy configuration
+  - Enabled error codes: return-value, union-attr, operator, misc
+  - Still disabled due to redis-py: arg-type (key types), assignment (Redis/RedisCluster), type-var (zadd)
+  - mypy now passes with 0 errors
 - [ ] Clean up config as changes are made
 
 ## Tooling/Infrastructure
