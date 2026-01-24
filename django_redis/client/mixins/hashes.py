@@ -1,12 +1,11 @@
-from typing import Any, cast
+from typing import Any, Generic, cast
 
-from redis import Redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 from redis.typing import EncodableT, KeyT
 
-from django_redis.client.mixins.protocols import ClientProtocol
+from django_redis.client.mixins.protocols import ClientProtocol, RawClientT
 from django_redis.exceptions import ConnectionInterrupted
 
 _main_exceptions = (
@@ -16,7 +15,7 @@ _main_exceptions = (
 )
 
 
-class HashMixin(ClientProtocol):
+class HashMixin(ClientProtocol, Generic[RawClientT]):
     """Mixin providing Redis hash operations."""
 
     def hset(
@@ -25,7 +24,7 @@ class HashMixin(ClientProtocol):
         field: str,
         value: EncodableT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Set the value of a field in hash at key.
         Returns the number of fields added to the hash.
@@ -41,7 +40,7 @@ class HashMixin(ClientProtocol):
         key: KeyT,
         field: str,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Remove a field from hash at key.
         Returns the number of fields deleted from the hash.
@@ -55,7 +54,7 @@ class HashMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Return the number of fields in hash at key."""
         if client is None:
@@ -67,7 +66,7 @@ class HashMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[str]:
         """Return a list of fields in hash at key."""
         if client is None:
@@ -83,7 +82,7 @@ class HashMixin(ClientProtocol):
         key: KeyT,
         field: str,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> bool:
         """Return True if field exists in hash at key, else False."""
         if client is None:
@@ -96,7 +95,7 @@ class HashMixin(ClientProtocol):
         key: KeyT,
         field: str,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> Any:
         """Get the value of a field in hash at key."""
         if client is None:
@@ -111,7 +110,7 @@ class HashMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> dict[str, Any]:
         """Get all fields and values in hash at key."""
         if client is None:
@@ -125,7 +124,7 @@ class HashMixin(ClientProtocol):
         key: KeyT,
         *fields: str,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[Any]:
         """Get values of multiple fields in hash at key."""
         if client is None:
@@ -139,7 +138,7 @@ class HashMixin(ClientProtocol):
         key: KeyT,
         mapping: dict[str, EncodableT],
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> bool:
         """Set multiple fields in hash at key."""
         if client is None:
@@ -154,7 +153,7 @@ class HashMixin(ClientProtocol):
         field: str,
         amount: int = 1,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Increment the integer value of a field in hash at key."""
         if client is None:
@@ -168,7 +167,7 @@ class HashMixin(ClientProtocol):
         field: str,
         amount: float = 1.0,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> float:
         """Increment the float value of a field in hash at key."""
         if client is None:
@@ -182,7 +181,7 @@ class HashMixin(ClientProtocol):
         field: str,
         value: EncodableT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> bool:
         """Set field in hash at key only if field does not exist."""
         if client is None:
@@ -195,7 +194,7 @@ class HashMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[Any]:
         """Get all values in hash at key."""
         if client is None:

@@ -30,10 +30,13 @@ classifiers = [
   "Topic :: Utilities",
   "Typing :: Typed",
 ]
-dependencies = ["Django>=5.2,<6.1", "redis>=5.2.1,<8"]
+dependencies = ["Django>=5.2,<6.1"]
 
 [project.optional-dependencies]
+redis = ["redis>=5.2.1,<8"]
 hiredis = ["redis[hiredis]>=5.2.1,<8"]
+valkey = ["valkey>=6.1.0,<7"]
+libvalkey = ["valkey[libvalkey]>=6.1.0,<7"]
 
 [project.urls]
 Homepage = "https://github.com/oliverhaas/django-redis-ng"
@@ -56,6 +59,7 @@ dev = [
   "backports-zstd==1.3.0; python_version < '3.14'",
   "ruff==0.14.13",
   "testcontainers==4.14.0",
+  "valkey>=6.1.0,<7",
 ]
 docs = ["mkdocs==1.6.1", "mkdocs-material==9.6.3", "mike==2.1.3"]
 
@@ -89,6 +93,7 @@ ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
 "django_redis/**" = [
+  "A002",    # min/max parameters match Redis API naming
   "ANN",     # Type annotations handled by mypy with stricter checking
   "ARG002",  # Unused arguments in method overrides for API compatibility
   "D",       # Docstrings - will add incrementally
@@ -98,13 +103,13 @@ ban-relative-imports = "all"
   "PLR0913", # Many arguments needed for Redis operations
   "PLR2004", # Magic values like -2 for Redis TTL are domain-specific
   "S311",    # Random is fine for non-cryptographic key generation
+  "UP046",   # Generic[T] style still valid, will migrate to PEP 695 later
 ]
 "django_redis/serializers/pickle.py" = ["A005", "S301"] # Pickle is intentional
 "django_redis/serializers/json.py" = ["A005"] # Named to match format
 "django_redis/compressors/gzip.py" = ["A005"] # Named to match format
 "django_redis/compressors/lzma.py" = ["A005"] # Named to match format
 "django_redis/compressors/zlib.py" = ["A005"] # Named to match format
-"django_redis/client/mixins/sorted_sets.py" = ["A002"] # min/max match Redis API
 "tests/**" = [
   "ANN",     # Type annotations not required in tests
   "ARG",     # Unused arguments common in fixtures
@@ -164,6 +169,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "msgpack"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "valkey.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

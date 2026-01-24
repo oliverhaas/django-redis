@@ -3,7 +3,7 @@ import re
 import socket
 from collections import OrderedDict
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Generic, cast
 
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache, get_key_func
@@ -16,7 +16,7 @@ from redis.exceptions import TimeoutError as RedisTimeoutError
 from redis.typing import AbsExpiryT, EncodableT, ExpiryT, KeyT
 
 from django_redis import pool
-from django_redis.client.mixins import HashMixin, ListMixin, SetMixin, SortedSetMixin
+from django_redis.client.mixins import HashMixin, ListMixin, RawClientT, SetMixin, SortedSetMixin
 from django_redis.exceptions import CompressorError, ConnectionInterrupted, SerializerError
 from django_redis.util import CacheKey
 
@@ -37,7 +37,13 @@ def glob_escape(s: str) -> str:
     return special_re.sub(r"[\1]", s)
 
 
-class DefaultClient(HashMixin, ListMixin, SetMixin, SortedSetMixin):
+class DefaultClient(
+    HashMixin[RawClientT],
+    ListMixin[RawClientT],
+    SetMixin[RawClientT],
+    SortedSetMixin[RawClientT],
+    Generic[RawClientT],
+):
     _server: list[str]
 
     def __init__(

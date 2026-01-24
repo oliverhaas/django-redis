@@ -1,12 +1,11 @@
-from typing import Any, cast
+from typing import Any, Generic, cast
 
-from redis import Redis
 from redis.typing import KeyT
 
-from django_redis.client.mixins.protocols import ClientProtocol
+from django_redis.client.mixins.protocols import ClientProtocol, RawClientT
 
 
-class ListMixin(ClientProtocol):
+class ListMixin(ClientProtocol, Generic[RawClientT]):
     """Mixin providing Redis list operations."""
 
     def lpush(
@@ -14,7 +13,7 @@ class ListMixin(ClientProtocol):
         key: KeyT,
         *values: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Insert values at head of list."""
         if client is None:
@@ -29,7 +28,7 @@ class ListMixin(ClientProtocol):
         key: KeyT,
         *values: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Insert values at tail of list."""
         if client is None:
@@ -44,7 +43,7 @@ class ListMixin(ClientProtocol):
         key: KeyT,
         count: int | None = None,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> Any | list[Any] | None:
         """Remove and return element(s) from head of list."""
         if client is None:
@@ -64,7 +63,7 @@ class ListMixin(ClientProtocol):
         key: KeyT,
         count: int | None = None,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> Any | list[Any] | None:
         """Remove and return element(s) from tail of list."""
         if client is None:
@@ -85,7 +84,7 @@ class ListMixin(ClientProtocol):
         start: int,
         end: int,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[Any]:
         """Return range of elements from list."""
         if client is None:
@@ -100,7 +99,7 @@ class ListMixin(ClientProtocol):
         key: KeyT,
         index: int,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> Any | None:
         """Return element at index in list."""
         if client is None:
@@ -116,7 +115,7 @@ class ListMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Return length of list."""
         if client is None:
@@ -131,7 +130,7 @@ class ListMixin(ClientProtocol):
         count: int,
         value: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Remove elements from list equal to value.
 
@@ -152,7 +151,7 @@ class ListMixin(ClientProtocol):
         start: int,
         end: int,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> bool:
         """Trim list to the specified range."""
         if client is None:
@@ -167,7 +166,7 @@ class ListMixin(ClientProtocol):
         index: int,
         value: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> bool:
         """Set the value at index in list."""
         if client is None:
@@ -184,7 +183,7 @@ class ListMixin(ClientProtocol):
         pivot: Any,
         value: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Insert value before or after pivot in list.
 
@@ -213,7 +212,7 @@ class ListMixin(ClientProtocol):
         count: int | None = None,
         maxlen: int | None = None,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int | list[int] | None:
         """Return the index of matching elements in list.
 
@@ -244,7 +243,7 @@ class ListMixin(ClientProtocol):
         src_direction: str = "LEFT",
         dest_direction: str = "RIGHT",
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> Any | None:
         """Atomically move element from source list to destination list.
 

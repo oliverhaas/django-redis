@@ -1,12 +1,11 @@
-from typing import Any, cast
+from typing import Any, Generic, cast
 
-from redis import Redis
 from redis.typing import KeyT
 
-from django_redis.client.mixins.protocols import ClientProtocol
+from django_redis.client.mixins.protocols import ClientProtocol, RawClientT
 
 
-class SortedSetMixin(ClientProtocol):
+class SortedSetMixin(ClientProtocol, Generic[RawClientT]):
     """Mixin providing Redis sorted set (ZSET) operations."""
 
     def zadd(
@@ -20,7 +19,7 @@ class SortedSetMixin(ClientProtocol):
         gt: bool = False,
         lt: bool = False,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Add members with scores to sorted set."""
         if client is None:
@@ -48,7 +47,7 @@ class SortedSetMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Get the number of members in sorted set."""
         if client is None:
@@ -63,7 +62,7 @@ class SortedSetMixin(ClientProtocol):
         min: float | str,
         max: float | str,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Count members in sorted set with scores between min and max."""
         if client is None:
@@ -78,7 +77,7 @@ class SortedSetMixin(ClientProtocol):
         amount: float,
         value: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> float:
         """Increment the score of member in sorted set by amount."""
         if client is None:
@@ -93,7 +92,7 @@ class SortedSetMixin(ClientProtocol):
         key: KeyT,
         count: int | None = None,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[tuple[Any, float]] | tuple[Any, float] | None:
         """Remove and return members with highest scores."""
         if client is None:
@@ -117,7 +116,7 @@ class SortedSetMixin(ClientProtocol):
         key: KeyT,
         count: int | None = None,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[tuple[Any, float]] | tuple[Any, float] | None:
         """Remove and return members with lowest scores."""
         if client is None:
@@ -145,7 +144,7 @@ class SortedSetMixin(ClientProtocol):
         withscores: bool = False,
         score_cast_func: type = float,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[Any] | list[tuple[Any, float]]:
         """Return members in sorted set by index range."""
         if client is None:
@@ -179,7 +178,7 @@ class SortedSetMixin(ClientProtocol):
         withscores: bool = False,
         score_cast_func: type = float,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[Any] | list[tuple[Any, float]]:
         """Return members in sorted set by score range."""
         if client is None:
@@ -209,7 +208,7 @@ class SortedSetMixin(ClientProtocol):
         key: KeyT,
         value: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int | None:
         """Get the rank (index) of member in sorted set, ordered low to high."""
         if client is None:
@@ -224,7 +223,7 @@ class SortedSetMixin(ClientProtocol):
         key: KeyT,
         *values: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Remove members from sorted set."""
         if client is None:
@@ -240,7 +239,7 @@ class SortedSetMixin(ClientProtocol):
         min: float | str,
         max: float | str,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Remove members from sorted set with scores between min and max."""
         if client is None:
@@ -257,7 +256,7 @@ class SortedSetMixin(ClientProtocol):
         withscores: bool = False,
         score_cast_func: type = float,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[Any] | list[tuple[Any, float]]:
         """Return members in sorted set by index range, ordered high to low."""
         if client is None:
@@ -290,7 +289,7 @@ class SortedSetMixin(ClientProtocol):
         withscores: bool = False,
         score_cast_func: type = float,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[Any] | list[tuple[Any, float]]:
         """Return members in sorted set by score range, ordered high to low."""
         if client is None:
@@ -320,7 +319,7 @@ class SortedSetMixin(ClientProtocol):
         key: KeyT,
         value: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> float | None:
         """Get the score of member in sorted set."""
         if client is None:
@@ -335,7 +334,7 @@ class SortedSetMixin(ClientProtocol):
         key: KeyT,
         value: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int | None:
         """Get the rank (index) of member in sorted set, ordered high to low."""
         if client is None:
@@ -350,7 +349,7 @@ class SortedSetMixin(ClientProtocol):
         key: KeyT,
         *members: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[float | None]:
         """Get scores of multiple members in sorted set."""
         if client is None:
@@ -366,7 +365,7 @@ class SortedSetMixin(ClientProtocol):
         start: int,
         end: int,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Remove members from sorted set by rank range."""
         if client is None:

@@ -319,253 +319,717 @@ class RedisCache(BaseCache):
     # =========================================================================
 
     @omit_exception
-    def sadd(self, *args, **kwargs) -> int:
-        return self.client.sadd(*args, **kwargs)
+    def sadd(
+        self,
+        key: str,
+        *values: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.sadd(key, *values, version=version, client=client)
 
     @omit_exception
-    def scard(self, *args, **kwargs) -> int:
-        return self.client.scard(*args, **kwargs)
+    def scard(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.scard(key, version=version, client=client)
 
     @omit_exception
-    def sdiff(self, *args, **kwargs) -> builtins.set[Any]:
-        return self.client.sdiff(*args, **kwargs)
+    def sdiff(
+        self,
+        *keys: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> builtins.set[Any]:
+        return self.client.sdiff(*keys, version=version, client=client)
 
     @omit_exception
-    def sdiffstore(self, *args, **kwargs) -> int:
-        return self.client.sdiffstore(*args, **kwargs)
+    def sdiffstore(
+        self,
+        dest: str,
+        *keys: str,
+        version_dest: int | None = None,
+        version_keys: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.sdiffstore(
+            dest,
+            *keys,
+            version_dest=version_dest,
+            version_keys=version_keys,
+            client=client,
+        )
 
     @omit_exception
-    def sinter(self, *args, **kwargs) -> builtins.set[Any]:
-        return self.client.sinter(*args, **kwargs)
+    def sinter(
+        self,
+        *keys: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> builtins.set[Any]:
+        return self.client.sinter(*keys, version=version, client=client)
 
     @omit_exception
-    def sinterstore(self, *args, **kwargs) -> int:
-        return self.client.sinterstore(*args, **kwargs)
+    def sinterstore(
+        self,
+        dest: str,
+        *keys: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.sinterstore(dest, *keys, version=version, client=client)
 
     @omit_exception
-    def sismember(self, *args, **kwargs) -> bool:
-        return self.client.sismember(*args, **kwargs)
+    def sismember(
+        self,
+        key: str,
+        member: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> bool:
+        return self.client.sismember(key, member, version=version, client=client)
 
     @omit_exception
-    def smembers(self, *args, **kwargs) -> builtins.set[Any]:
-        return self.client.smembers(*args, **kwargs)
+    def smembers(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> builtins.set[Any]:
+        return self.client.smembers(key, version=version, client=client)
 
     @omit_exception
-    def smove(self, *args, **kwargs) -> bool:
-        return self.client.smove(*args, **kwargs)
+    def smove(
+        self,
+        source: str,
+        destination: str,
+        member: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> bool:
+        return self.client.smove(source, destination, member, version=version, client=client)
 
     @omit_exception
-    def spop(self, *args, **kwargs) -> Any:
-        return self.client.spop(*args, **kwargs)
+    def spop(
+        self,
+        key: str,
+        count: int | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> builtins.set[Any] | Any:
+        return self.client.spop(key, count=count, version=version, client=client)
 
     @omit_exception
-    def srandmember(self, *args, **kwargs) -> Any:
-        return self.client.srandmember(*args, **kwargs)
+    def srandmember(
+        self,
+        key: str,
+        count: int | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any] | Any:
+        return self.client.srandmember(key, count=count, version=version, client=client)
 
     @omit_exception
-    def srem(self, *args, **kwargs) -> int:
-        return self.client.srem(*args, **kwargs)
+    def srem(
+        self,
+        key: str,
+        *members: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.srem(key, *members, version=version, client=client)
 
     @omit_exception
-    def sscan(self, *args, **kwargs) -> builtins.set[Any]:
-        return self.client.sscan(*args, **kwargs)
+    def sscan(
+        self,
+        key: str,
+        match: str | None = None,
+        count: int | None = 10,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> builtins.set[Any]:
+        return self.client.sscan(key, match=match, count=count, version=version, client=client)
 
     @omit_exception
-    def sscan_iter(self, *args, **kwargs) -> Iterator[Any]:
-        return self.client.sscan_iter(*args, **kwargs)
+    def sscan_iter(
+        self,
+        key: str,
+        match: str | None = None,
+        count: int | None = 10,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Iterator[Any]:
+        return self.client.sscan_iter(key, match=match, count=count, version=version, client=client)
 
     @omit_exception
-    def smismember(self, *args, **kwargs) -> list[bool]:
-        return self.client.smismember(*args, **kwargs)
+    def smismember(
+        self,
+        key: str,
+        *members: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[bool]:
+        return self.client.smismember(key, *members, version=version, client=client)
 
     @omit_exception
-    def sunion(self, *args, **kwargs) -> builtins.set[Any]:
-        return self.client.sunion(*args, **kwargs)
+    def sunion(
+        self,
+        *keys: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> builtins.set[Any]:
+        return self.client.sunion(*keys, version=version, client=client)
 
     @omit_exception
-    def sunionstore(self, *args, **kwargs) -> int:
-        return self.client.sunionstore(*args, **kwargs)
+    def sunionstore(
+        self,
+        destination: str,
+        *keys: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.sunionstore(destination, *keys, version=version, client=client)
 
     # =========================================================================
     # Redis Hash Operations
     # =========================================================================
 
     @omit_exception
-    def hset(self, *args, **kwargs) -> int:
-        return self.client.hset(*args, **kwargs)
+    def hset(
+        self,
+        key: str,
+        field: str,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.hset(key, field, value, version=version, client=client)
 
     @omit_exception
-    def hdel(self, *args, **kwargs) -> int:
-        return self.client.hdel(*args, **kwargs)
+    def hdel(
+        self,
+        key: str,
+        field: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.hdel(key, field, version=version, client=client)
 
     @omit_exception
-    def hlen(self, *args, **kwargs) -> int:
-        return self.client.hlen(*args, **kwargs)
+    def hlen(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.hlen(key, version=version, client=client)
 
     @omit_exception
-    def hkeys(self, *args, **kwargs) -> list[str]:
-        return self.client.hkeys(*args, **kwargs)
+    def hkeys(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[str]:
+        return self.client.hkeys(key, version=version, client=client)
 
     @omit_exception
-    def hexists(self, *args, **kwargs) -> bool:
-        return self.client.hexists(*args, **kwargs)
+    def hexists(
+        self,
+        key: str,
+        field: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> bool:
+        return self.client.hexists(key, field, version=version, client=client)
 
     @omit_exception
-    def hget(self, *args, **kwargs) -> Any | None:
-        return self.client.hget(*args, **kwargs)
+    def hget(
+        self,
+        key: str,
+        field: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Any | None:
+        return self.client.hget(key, field, version=version, client=client)
 
     @omit_exception
-    def hgetall(self, *args, **kwargs) -> dict[str, Any]:
-        return self.client.hgetall(*args, **kwargs)
+    def hgetall(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> dict[str, Any]:
+        return self.client.hgetall(key, version=version, client=client)
 
     @omit_exception
-    def hmget(self, *args, **kwargs) -> list[Any | None]:
-        return self.client.hmget(*args, **kwargs)
+    def hmget(
+        self,
+        key: str,
+        *fields: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any | None]:
+        return self.client.hmget(key, *fields, version=version, client=client)
 
     @omit_exception
-    def hmset(self, *args, **kwargs) -> bool:
-        return self.client.hmset(*args, **kwargs)
+    def hmset(
+        self,
+        key: str,
+        mapping: dict[str, Any],
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> bool:
+        return self.client.hmset(key, mapping, version=version, client=client)
 
     @omit_exception
-    def hincrby(self, *args, **kwargs) -> int:
-        return self.client.hincrby(*args, **kwargs)
+    def hincrby(
+        self,
+        key: str,
+        field: str,
+        amount: int = 1,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.hincrby(key, field, amount=amount, version=version, client=client)
 
     @omit_exception
-    def hincrbyfloat(self, *args, **kwargs) -> float:
-        return self.client.hincrbyfloat(*args, **kwargs)
+    def hincrbyfloat(
+        self,
+        key: str,
+        field: str,
+        amount: float = 1.0,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> float:
+        return self.client.hincrbyfloat(key, field, amount=amount, version=version, client=client)
 
     @omit_exception
-    def hsetnx(self, *args, **kwargs) -> bool:
-        return self.client.hsetnx(*args, **kwargs)
+    def hsetnx(
+        self,
+        key: str,
+        field: str,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> bool:
+        return self.client.hsetnx(key, field, value, version=version, client=client)
 
     @omit_exception
-    def hvals(self, *args, **kwargs) -> list[Any]:
-        return self.client.hvals(*args, **kwargs)
+    def hvals(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any]:
+        return self.client.hvals(key, version=version, client=client)
 
     # =========================================================================
     # Redis Sorted Set Operations
     # =========================================================================
 
     @omit_exception
-    def zadd(self, *args, **kwargs) -> int | float | None:
-        return self.client.zadd(*args, **kwargs)
+    def zadd(
+        self,
+        key: str,
+        mapping: dict[Any, float],
+        nx: bool = False,
+        xx: bool = False,
+        ch: bool = False,
+        incr: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.zadd(
+            key,
+            mapping,
+            nx=nx,
+            xx=xx,
+            ch=ch,
+            incr=incr,
+            gt=gt,
+            lt=lt,
+            version=version,
+            client=client,
+        )
 
     @omit_exception
-    def zcard(self, *args, **kwargs) -> int:
-        return self.client.zcard(*args, **kwargs)
+    def zcard(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.zcard(key, version=version, client=client)
 
     @omit_exception
-    def zcount(self, *args, **kwargs) -> int:
-        return self.client.zcount(*args, **kwargs)
+    def zcount(
+        self,
+        key: str,
+        min: float | str,
+        max: float | str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.zcount(key, min, max, version=version, client=client)
 
     @omit_exception
-    def zincrby(self, *args, **kwargs) -> float:
-        return self.client.zincrby(*args, **kwargs)
+    def zincrby(
+        self,
+        key: str,
+        amount: float,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> float:
+        return self.client.zincrby(key, amount, value, version=version, client=client)
 
     @omit_exception
-    def zpopmax(self, *args, **kwargs) -> list[tuple[Any, float]]:
-        return self.client.zpopmax(*args, **kwargs)
+    def zpopmax(
+        self,
+        key: str,
+        count: int | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[tuple[Any, float]] | tuple[Any, float] | None:
+        return self.client.zpopmax(key, count=count, version=version, client=client)
 
     @omit_exception
-    def zpopmin(self, *args, **kwargs) -> list[tuple[Any, float]]:
-        return self.client.zpopmin(*args, **kwargs)
+    def zpopmin(
+        self,
+        key: str,
+        count: int | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[tuple[Any, float]] | tuple[Any, float] | None:
+        return self.client.zpopmin(key, count=count, version=version, client=client)
 
     @omit_exception
-    def zrange(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
-        return self.client.zrange(*args, **kwargs)
+    def zrange(
+        self,
+        key: str,
+        start: int,
+        end: int,
+        desc: bool = False,
+        withscores: bool = False,
+        score_cast_func: type = float,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any] | list[tuple[Any, float]]:
+        return self.client.zrange(
+            key,
+            start,
+            end,
+            desc=desc,
+            withscores=withscores,
+            score_cast_func=score_cast_func,
+            version=version,
+            client=client,
+        )
 
     @omit_exception
-    def zrangebyscore(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
-        return self.client.zrangebyscore(*args, **kwargs)
+    def zrangebyscore(
+        self,
+        key: str,
+        min: float | str,
+        max: float | str,
+        start: int | None = None,
+        num: int | None = None,
+        withscores: bool = False,
+        score_cast_func: type = float,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any] | list[tuple[Any, float]]:
+        return self.client.zrangebyscore(
+            key,
+            min,
+            max,
+            start=start,
+            num=num,
+            withscores=withscores,
+            score_cast_func=score_cast_func,
+            version=version,
+            client=client,
+        )
 
     @omit_exception
-    def zrank(self, *args, **kwargs) -> int | None:
-        return self.client.zrank(*args, **kwargs)
+    def zrank(
+        self,
+        key: str,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int | None:
+        return self.client.zrank(key, value, version=version, client=client)
 
     @omit_exception
-    def zrem(self, *args, **kwargs) -> int:
-        return self.client.zrem(*args, **kwargs)
+    def zrem(
+        self,
+        key: str,
+        *values: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.zrem(key, *values, version=version, client=client)
 
     @omit_exception
-    def zremrangebyscore(self, *args, **kwargs) -> int:
-        return self.client.zremrangebyscore(*args, **kwargs)
+    def zremrangebyscore(
+        self,
+        key: str,
+        min: float | str,
+        max: float | str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.zremrangebyscore(key, min, max, version=version, client=client)
 
     @omit_exception
-    def zrevrange(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
-        return self.client.zrevrange(*args, **kwargs)
+    def zrevrange(
+        self,
+        key: str,
+        start: int,
+        end: int,
+        withscores: bool = False,
+        score_cast_func: type = float,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any] | list[tuple[Any, float]]:
+        return self.client.zrevrange(
+            key,
+            start,
+            end,
+            withscores=withscores,
+            score_cast_func=score_cast_func,
+            version=version,
+            client=client,
+        )
 
     @omit_exception
-    def zrevrangebyscore(self, *args, **kwargs) -> list[Any] | list[tuple[Any, float]]:
-        return self.client.zrevrangebyscore(*args, **kwargs)
+    def zrevrangebyscore(
+        self,
+        key: str,
+        max: float | str,
+        min: float | str,
+        start: int | None = None,
+        num: int | None = None,
+        withscores: bool = False,
+        score_cast_func: type = float,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any] | list[tuple[Any, float]]:
+        return self.client.zrevrangebyscore(
+            key,
+            max,
+            min,
+            start=start,
+            num=num,
+            withscores=withscores,
+            score_cast_func=score_cast_func,
+            version=version,
+            client=client,
+        )
 
     @omit_exception
-    def zscore(self, *args, **kwargs) -> float | None:
-        return self.client.zscore(*args, **kwargs)
+    def zscore(
+        self,
+        key: str,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> float | None:
+        return self.client.zscore(key, value, version=version, client=client)
 
     @omit_exception
-    def zrevrank(self, *args, **kwargs) -> int | None:
-        return self.client.zrevrank(*args, **kwargs)
+    def zrevrank(
+        self,
+        key: str,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int | None:
+        return self.client.zrevrank(key, value, version=version, client=client)
 
     @omit_exception
-    def zmscore(self, *args, **kwargs) -> list[float | None]:
-        return self.client.zmscore(*args, **kwargs)
+    def zmscore(
+        self,
+        key: str,
+        *members: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[float | None]:
+        return self.client.zmscore(key, *members, version=version, client=client)
 
     @omit_exception
-    def zremrangebyrank(self, *args, **kwargs) -> int:
-        return self.client.zremrangebyrank(*args, **kwargs)
+    def zremrangebyrank(
+        self,
+        key: str,
+        start: int,
+        end: int,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.zremrangebyrank(key, start, end, version=version, client=client)
 
     # =========================================================================
     # Redis List Operations
     # =========================================================================
 
     @omit_exception
-    def lpush(self, *args, **kwargs) -> int:
-        return self.client.lpush(*args, **kwargs)
+    def lpush(
+        self,
+        key: str,
+        *values: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.lpush(key, *values, version=version, client=client)
 
     @omit_exception
-    def rpush(self, *args, **kwargs) -> int:
-        return self.client.rpush(*args, **kwargs)
+    def rpush(
+        self,
+        key: str,
+        *values: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.rpush(key, *values, version=version, client=client)
 
     @omit_exception
-    def lpop(self, *args, **kwargs) -> Any | list[Any] | None:
-        return self.client.lpop(*args, **kwargs)
+    def lpop(
+        self,
+        key: str,
+        count: int | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Any | list[Any] | None:
+        return self.client.lpop(key, count=count, version=version, client=client)
 
     @omit_exception
-    def rpop(self, *args, **kwargs) -> Any | list[Any] | None:
-        return self.client.rpop(*args, **kwargs)
+    def rpop(
+        self,
+        key: str,
+        count: int | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Any | list[Any] | None:
+        return self.client.rpop(key, count=count, version=version, client=client)
 
     @omit_exception
-    def lrange(self, *args, **kwargs) -> list[Any]:
-        return self.client.lrange(*args, **kwargs)
+    def lrange(
+        self,
+        key: str,
+        start: int,
+        end: int,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> list[Any]:
+        return self.client.lrange(key, start, end, version=version, client=client)
 
     @omit_exception
-    def lindex(self, *args, **kwargs) -> Any | None:
-        return self.client.lindex(*args, **kwargs)
+    def lindex(
+        self,
+        key: str,
+        index: int,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Any | None:
+        return self.client.lindex(key, index, version=version, client=client)
 
     @omit_exception
-    def llen(self, *args, **kwargs) -> int:
-        return self.client.llen(*args, **kwargs)
+    def llen(
+        self,
+        key: str,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.llen(key, version=version, client=client)
 
     @omit_exception
-    def lrem(self, *args, **kwargs) -> int:
-        return self.client.lrem(*args, **kwargs)
+    def lrem(
+        self,
+        key: str,
+        count: int,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.lrem(key, count, value, version=version, client=client)
 
     @omit_exception
-    def ltrim(self, *args, **kwargs) -> bool:
-        return self.client.ltrim(*args, **kwargs)
+    def ltrim(
+        self,
+        key: str,
+        start: int,
+        end: int,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> bool:
+        return self.client.ltrim(key, start, end, version=version, client=client)
 
     @omit_exception
-    def lset(self, *args, **kwargs) -> bool:
-        return self.client.lset(*args, **kwargs)
+    def lset(
+        self,
+        key: str,
+        index: int,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> bool:
+        return self.client.lset(key, index, value, version=version, client=client)
 
     @omit_exception
-    def linsert(self, *args, **kwargs) -> int:
-        return self.client.linsert(*args, **kwargs)
+    def linsert(
+        self,
+        key: str,
+        where: str,
+        pivot: Any,
+        value: Any,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int:
+        return self.client.linsert(key, where, pivot, value, version=version, client=client)
 
     @omit_exception
-    def lpos(self, *args, **kwargs) -> int | list[int] | None:
-        return self.client.lpos(*args, **kwargs)
+    def lpos(
+        self,
+        key: str,
+        value: Any,
+        rank: int | None = None,
+        count: int | None = None,
+        maxlen: int | None = None,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> int | list[int] | None:
+        return self.client.lpos(
+            key,
+            value,
+            rank=rank,
+            count=count,
+            maxlen=maxlen,
+            version=version,
+            client=client,
+        )
 
     @omit_exception
-    def lmove(self, *args, **kwargs) -> Any | None:
-        return self.client.lmove(*args, **kwargs)
+    def lmove(
+        self,
+        source: str,
+        destination: str,
+        src_direction: str = "LEFT",
+        dest_direction: str = "RIGHT",
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Any | None:
+        return self.client.lmove(
+            source,
+            destination,
+            src_direction,
+            dest_direction,
+            version=version,
+            client=client,
+        )

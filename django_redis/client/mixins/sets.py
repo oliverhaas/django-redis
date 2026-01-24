@@ -1,14 +1,13 @@
 import builtins
 from collections.abc import Iterator
-from typing import Any, cast
+from typing import Any, Generic, cast
 
-from redis import Redis
 from redis.typing import EncodableT, KeyT, PatternT
 
-from django_redis.client.mixins.protocols import ClientProtocol
+from django_redis.client.mixins.protocols import ClientProtocol, RawClientT
 
 
-class SetMixin(ClientProtocol):
+class SetMixin(ClientProtocol, Generic[RawClientT]):
     """Mixin providing Redis set operations."""
 
     def sadd(
@@ -16,7 +15,7 @@ class SetMixin(ClientProtocol):
         key: KeyT,
         *values: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Add members to a set."""
         if client is None:
@@ -30,7 +29,7 @@ class SetMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Get the number of members in a set."""
         if client is None:
@@ -43,7 +42,7 @@ class SetMixin(ClientProtocol):
         self,
         *keys: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> builtins.set[Any]:
         """Return the difference of multiple sets."""
         if client is None:
@@ -59,7 +58,7 @@ class SetMixin(ClientProtocol):
         *keys: KeyT,
         version_dest: int | None = None,
         version_keys: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Store the difference of multiple sets in a destination set."""
         if client is None:
@@ -73,7 +72,7 @@ class SetMixin(ClientProtocol):
         self,
         *keys: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> builtins.set[Any]:
         """Return the intersection of multiple sets."""
         if client is None:
@@ -88,7 +87,7 @@ class SetMixin(ClientProtocol):
         dest: KeyT,
         *keys: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Store the intersection of multiple sets in a destination set."""
         if client is None:
@@ -103,7 +102,7 @@ class SetMixin(ClientProtocol):
         key: KeyT,
         *members,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list[bool]:
         """Check if multiple members exist in a set."""
         if client is None:
@@ -119,7 +118,7 @@ class SetMixin(ClientProtocol):
         key: KeyT,
         member: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> bool:
         """Check if a member exists in a set."""
         if client is None:
@@ -133,7 +132,7 @@ class SetMixin(ClientProtocol):
         self,
         key: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> builtins.set[Any]:
         """Get all members of a set."""
         if client is None:
@@ -149,7 +148,7 @@ class SetMixin(ClientProtocol):
         destination: KeyT,
         member: Any,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> bool:
         """Move a member from one set to another."""
         if client is None:
@@ -165,7 +164,7 @@ class SetMixin(ClientProtocol):
         key: KeyT,
         count: int | None = None,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> builtins.set | Any:
         """Remove and return random member(s) from a set."""
         if client is None:
@@ -180,7 +179,7 @@ class SetMixin(ClientProtocol):
         key: KeyT,
         count: int | None = None,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> list | Any:
         """Get random member(s) from a set without removing."""
         if client is None:
@@ -195,7 +194,7 @@ class SetMixin(ClientProtocol):
         key: KeyT,
         *members: EncodableT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Remove members from a set."""
         if client is None:
@@ -211,7 +210,7 @@ class SetMixin(ClientProtocol):
         match: str | None = None,
         count: int | None = 10,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> builtins.set[Any]:
         """Scan members of a set."""
         if self._has_compression_enabled() and match:
@@ -238,7 +237,7 @@ class SetMixin(ClientProtocol):
         match: str | None = None,
         count: int | None = 10,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> Iterator[Any]:
         """Iterate over members of a set using scan."""
         if self._has_compression_enabled() and match:
@@ -260,7 +259,7 @@ class SetMixin(ClientProtocol):
         self,
         *keys: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> builtins.set[Any]:
         """Return the union of multiple sets."""
         if client is None:
@@ -275,7 +274,7 @@ class SetMixin(ClientProtocol):
         destination: Any,
         *keys: KeyT,
         version: int | None = None,
-        client: Redis | None = None,
+        client: RawClientT | None = None,
     ) -> int:
         """Store the union of multiple sets in a destination set."""
         if client is None:
