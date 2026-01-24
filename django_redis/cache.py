@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -8,42 +7,17 @@ from django import VERSION as DJANGO_VERSION
 
 if TYPE_CHECKING:
     import builtins
-    from collections.abc import Callable, Iterator, Mapping
+    from collections.abc import Iterator, Mapping
 from django.conf import settings
 from django.core.cache.backends.base import DEFAULT_TIMEOUT, BaseCache
 from django.utils.module_loading import import_string
 
-from django_redis.exceptions import ConnectionInterrupted
+from django_redis.omit_exception import omit_exception
 
 # Type alias matching Django's cache interface
 _DEFAULT_TIMEOUT: Any = DEFAULT_TIMEOUT  # Sentinel type
 
 CONNECTION_INTERRUPTED = object()
-
-
-def omit_exception(
-    method: Callable | None = None,
-    return_value: Any | None = None,
-):
-    """Simple decorator that intercepts connection
-    errors and ignores these if settings specify this.
-    """
-    if method is None:
-        return functools.partial(omit_exception, return_value=return_value)
-
-    @functools.wraps(method)
-    def _decorator(self, *args, **kwargs):
-        try:
-            return method(self, *args, **kwargs)
-        except ConnectionInterrupted as e:
-            if self._ignore_exceptions:
-                if self._log_ignored_exceptions:
-                    self.logger.exception("Exception ignored")
-
-                return return_value
-            raise e.__cause__  # noqa: B904
-
-    return _decorator
 
 
 class RedisCache(BaseCache):
