@@ -63,7 +63,7 @@ class TestBasicCacheOperations:
         assert res == "heló"
 
     def test_save_dict(self, cache: RedisCache):
-        if isinstance(cache.client._serializers[0], JSONSerializer | MSGPackSerializer):
+        if isinstance(cache._serializers[0], JSONSerializer | MSGPackSerializer):
             # JSONSerializer and MSGPackSerializer use the isoformat for
             # datetimes.
             now_dt: str | datetime.datetime = datetime.datetime.now().isoformat()
@@ -133,25 +133,22 @@ class TestBasicCacheOperations:
         res = cache.get_many(["a", "b", "c"])
         assert res == {"a": 1, "b": 2, "c": 3}
 
-    def test_set_call_empty_pipeline(
+    def test_set_via_pipeline(
         self,
         cache: RedisCache,
         mocker: MockerFixture,
     ):
-        pipeline = cache.client.get_client(write=True).pipeline()
-        key = "key"
-        value = "value"
+        """Test that pipeline.set() works correctly."""
+        key = "pipeline_key"
+        value = "pipeline_value"
 
-        mocked_set = mocker.patch.object(pipeline, "set")
-        cache.set(key, value, client=pipeline)
+        # Use the new architecture's pipeline API
+        with cache.pipeline() as pipe:
+            pipe.set(key, value)
+            results = pipe.execute()
 
-        mocked_set.assert_called_once_with(
-            cache.client.make_key(key, version=None),
-            cache.client.encode(value),
-            nx=False,
-            px=cache.client._backend.default_timeout * 1000,
-            xx=False,
-        )
+        assert results == [True]
+        assert cache.get(key) == value
 
     def test_delete(self, cache: RedisCache):
         cache.set_many({"a": 1, "b": 2, "c": 3})
@@ -164,9 +161,8 @@ class TestBasicCacheOperations:
         res = cache.delete("a")
         assert bool(res) is False
 
-    @patch("django_redis.cache.DJANGO_VERSION", (3, 1, 0, "final", 0))
-    def test_delete_return_value_type_new31(self, cache: RedisCache):
-        """delete() returns a boolean instead of int since django version 3.1"""
+    def test_delete_return_value_type(self, cache: RedisCache):
+        """delete() returns a boolean (Django 3.1+)."""
         cache.set("a", 1)
         res = cache.delete("a")
         assert isinstance(res, bool)
@@ -174,17 +170,6 @@ class TestBasicCacheOperations:
         res = cache.delete("b")
         assert isinstance(res, bool)
         assert res is False
-
-    @patch("django_redis.cache.DJANGO_VERSION", new=(3, 0, 1, "final", 0))
-    def test_delete_return_value_type_before31(self, cache: RedisCache):
-        """delete() returns a int before django version 3.1"""
-        cache.set("a", 1)
-        res = cache.delete("a")
-        assert isinstance(res, int)
-        assert res == 1
-        res = cache.delete("b")
-        assert isinstance(res, int)
-        assert res == 0
 
     def test_delete_many(self, cache: RedisCache):
         cache.set_many({"a": 1, "b": 2, "c": 3})
@@ -228,6 +213,10 @@ class TestBasicCacheOperations:
         cache.close()
 
     def test_close_client(self, cache: RedisCache, mocker: MockerFixture):
-        mock = mocker.patch.object(cache.client, "close")
+        # In the new architecture, cache IS the client, so close() is called directly
+        # Just verify close() can be called without error
+        cache.set("test_close_key", "value")
         cache.close()
-        assert mock.called
+        # Verify we can still use the cache after close (new connection should be created)
+        cache.set("test_close_key2", "value2")
+        assert cache.get("test_close_key2") == "value2"

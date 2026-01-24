@@ -108,7 +108,7 @@ class TestSetOperations:
         assert items == {"bar1", "bar2"}
 
     def test_sscan_with_match(self, cache: RedisCache):
-        if cache.client._has_compression_enabled():
+        if cache._has_compression_enabled():
             pytest.skip("Compression is enabled, sscan with match is not supported")
         cache.sadd("foo", "bar1", "bar2", "zoo")
         items = cache.sscan("foo", match="zoo")
@@ -120,7 +120,7 @@ class TestSetOperations:
         assert set(items) == {"bar1", "bar2"}
 
     def test_sscan_iter_with_match(self, cache: RedisCache):
-        if cache.client._has_compression_enabled():
+        if cache._has_compression_enabled():
             pytest.skip(
                 "Compression is enabled, sscan_iter with match is not supported",
             )

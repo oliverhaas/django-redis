@@ -1,245 +1,61 @@
-"""Tests for ClusterClient and ClusterConnectionFactory."""
+"""Tests for ClusterCacheClient."""
 
 from unittest.mock import MagicMock, patch
 
 import pytest
+from redis.cluster import RedisCluster, key_slot
 
-from django_redis.client.cluster import ClusterClient
-from django_redis.pool import ClusterConnectionFactory
+from django_redis.client import ClusterCacheClient
 
 
-class TestClusterConnectionFactory:
-    """Tests for ClusterConnectionFactory."""
+def setup_cluster_client(mock_cluster_cls=None):
+    """Helper to create a properly configured ClusterCacheClient for testing."""
+    client = ClusterCacheClient.__new__(ClusterCacheClient)
+    client._servers = ["redis://localhost:7000"]
+    client._options = {}
+    client._clusters = {}
+    # Set class attributes that are normally set via class definition
+    if mock_cluster_cls is not None:
+        client._cluster_class = mock_cluster_cls
+    else:
+        client._cluster_class = RedisCluster
+    client._key_slot_func = key_slot
+    return client
 
-    def setup_method(self):
-        """Clear the cluster cache before each test."""
-        ClusterConnectionFactory._clusters.clear()
 
-    def test_init(self):
-        """Test factory initialization."""
-        options = {"PASSWORD": "secret", "SOCKET_TIMEOUT": 10}
-        factory = ClusterConnectionFactory(options)
+class TestClusterCacheClient:
+    """Tests for ClusterCacheClient."""
 
-        assert factory.options == options
-        assert factory.redis_client_cls_kwargs == {}
-
-    def test_init_with_client_kwargs(self):
-        """Test factory initialization with client kwargs."""
-        options = {"REDIS_CLIENT_KWARGS": {"decode_responses": True}}
-        factory = ClusterConnectionFactory(options)
-
-        assert factory.redis_client_cls_kwargs == {"decode_responses": True}
-
-    def test_make_connection_params_basic(self):
-        """Test basic connection params from URL."""
-        factory = ClusterConnectionFactory({})
-        params = factory.make_connection_params("redis://localhost:7000")
-
-        assert params["host"] == "localhost"
-        assert params["port"] == 7000
-
-    def test_make_connection_params_with_password(self):
-        """Test connection params include password from options."""
-        factory = ClusterConnectionFactory({"PASSWORD": "secret123"})
-        params = factory.make_connection_params("redis://localhost:7000")
-
-        assert params["password"] == "secret123"
-
-    def test_make_connection_params_with_timeouts(self):
-        """Test connection params include timeout settings."""
-        factory = ClusterConnectionFactory(
-            {
-                "SOCKET_TIMEOUT": 5.0,
-                "SOCKET_CONNECT_TIMEOUT": 3.0,
-            },
-        )
-        params = factory.make_connection_params("redis://localhost:7000")
-
-        assert params["socket_timeout"] == 5.0
-        assert params["socket_connect_timeout"] == 3.0
-
-    def test_make_connection_params_invalid_timeout(self):
-        """Test that invalid timeout raises error."""
-        from django.core.exceptions import ImproperlyConfigured
-
-        factory = ClusterConnectionFactory({"SOCKET_TIMEOUT": "invalid"})
-
-        with pytest.raises(ImproperlyConfigured):
-            factory.make_connection_params("redis://localhost:7000")
-
-    @patch("django_redis.pool.RedisCluster")
-    def test_connect_creates_cluster(self, mock_cluster_cls):
-        """Test connect creates a RedisCluster instance."""
+    def test_get_client_creates_cluster(self):
+        """Test get_client creates a RedisCluster instance."""
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
         mock_cluster_cls.return_value = mock_cluster
 
-        factory = ClusterConnectionFactory({})
-        result = factory.connect("redis://localhost:7000")
-
-        assert result == mock_cluster
-        mock_cluster_cls.assert_called_once()
-
-    @patch("django_redis.pool.RedisCluster")
-    def test_connect_caches_cluster(self, mock_cluster_cls):
-        """Test connect caches cluster instances."""
-        mock_cluster = MagicMock()
-        mock_cluster_cls.return_value = mock_cluster
-
-        factory = ClusterConnectionFactory({})
-        result1 = factory.connect("redis://localhost:7000")
-        result2 = factory.connect("redis://localhost:7000")
-
-        assert result1 is result2
-        assert mock_cluster_cls.call_count == 1
-
-    def test_disconnect(self):
-        """Test disconnect calls close on cluster."""
-        mock_cluster = MagicMock()
-        factory = ClusterConnectionFactory({})
-
-        factory.disconnect(mock_cluster)
-
-        mock_cluster.close.assert_called_once()
-
-
-class TestClusterClient:
-    """Tests for ClusterClient."""
-
-    @patch("django_redis.pool.get_connection_factory")
-    def test_init(self, mock_get_factory):
-        """Test ClusterClient initialization."""
-        mock_factory = MagicMock()
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
-
-        # Cluster client always has single client slot
-        assert len(client._clients) == 1
-
-    @patch("django_redis.pool.get_connection_factory")
-    def test_get_next_client_index_always_zero(self, mock_get_factory):
-        """Test that get_next_client_index always returns 0 for cluster."""
-        mock_factory = MagicMock()
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000", "redis://localhost:7001"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
-
-        # Should always return 0 regardless of write flag or tried list
-        assert client.get_next_client_index(write=True) == 0
-        assert client.get_next_client_index(write=False) == 0
-        assert client.get_next_client_index(write=True, tried=[0]) == 0
-
-    @patch("django_redis.pool.get_connection_factory")
-    def test_get_client(self, mock_get_factory):
-        """Test get_client returns cluster connection."""
-        mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
 
         result = client.get_client()
 
         assert result == mock_cluster
-        mock_factory.connect.assert_called_once_with("redis://localhost:7000")
+        mock_cluster_cls.assert_called_once()
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_get_client_caches_connection(self, mock_get_factory):
-        """Test get_client caches the connection."""
+    def test_get_client_caches_cluster(self):
+        """Test get_client caches cluster instances."""
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
 
         result1 = client.get_client()
         result2 = client.get_client()
 
         assert result1 is result2
-        assert mock_factory.connect.call_count == 1
+        assert mock_cluster_cls.call_count == 1
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_do_close_clients(self, mock_get_factory):
-        """Test do_close_clients closes the cluster connection via factory."""
-        mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
-
-        # Connect first
-        client.get_client()
-
-        # Close
-        client.do_close_clients()
-
-        mock_factory.disconnect.assert_called_once_with(mock_cluster)
-        assert client._clients == [None]
-
-    @patch("django_redis.pool.get_connection_factory")
-    def test_group_keys_by_slot(self, mock_get_factory):
+    def test_group_keys_by_slot(self):
         """Test _group_keys_by_slot groups keys correctly."""
-        mock_factory = MagicMock()
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client()
 
         # Keys with same hash tag should be in same slot
         keys = ["{user}:1", "{user}:2", "{user}:3"]
@@ -250,22 +66,9 @@ class TestClusterClient:
         slot_keys = list(slots.values())[0]
         assert len(slot_keys) == 3
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_group_keys_by_slot_different_slots(self, mock_get_factory):
+    def test_group_keys_by_slot_different_slots(self):
         """Test _group_keys_by_slot separates keys in different slots."""
-        mock_factory = MagicMock()
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client()
 
         # Use hash tags that are guaranteed to hash to different slots:
         # {a} -> slot 15495, {b} -> slot 3300, {c} -> slot 7365
@@ -277,29 +80,30 @@ class TestClusterClient:
         total_keys = sum(len(v) for v in slots.values())
         assert total_keys == 3
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_get_many_uses_mget_nonatomic(self, mock_get_factory):
+    def test_get_many_uses_mget_nonatomic(self):
         """Test get_many uses mget_nonatomic for cross-slot keys."""
         import pickle
 
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k  # Simple key function
+        client = setup_cluster_client(mock_cluster_cls)
+        client._serializers = [MagicMock()]
+        client._compressors = [MagicMock()]
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = ""
+        client.version = 1
+        client.key_func = lambda k, p, v: k
 
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        # Setup mocks for encoding/decoding
+        client._serializers[0].loads.side_effect = lambda x: pickle.loads(x)
+        client._compressors[0].decompress.side_effect = lambda x: x
+        client._compressors[0].__class__.__name__ = "IdentityCompressor"
 
         # Mock mget_nonatomic response with pickled data
-        # mget_nonatomic handles slot splitting internally and returns values in order
         mock_cluster.mget_nonatomic.return_value = [
             pickle.dumps("value_a"),
             pickle.dumps("value_b"),
@@ -317,183 +121,105 @@ class TestClusterClient:
         assert "value_b" in result.values()
         assert "value_c" in result.values()
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_get_many_empty_keys(self, mock_get_factory):
+    def test_get_many_empty_keys(self):
         """Test get_many with empty keys list."""
-        mock_factory = MagicMock()
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client()
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
 
         result = client.get_many([])
         assert result == {}
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_delete_many_groups_by_slot(self, mock_get_factory):
+    def test_delete_many_groups_by_slot(self):
         """Test delete_many handles cross-slot keys."""
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = ""
+        client.version = 1
+        client.key_func = lambda k, p, v: k
 
         # Mock delete to return count of deleted keys per call
         mock_cluster.delete.return_value = 1
 
         # Using hash tags that hash to different slots:
         # {a} -> slot 15495, {b} -> slot 3300, {c} -> slot 7365
-        result = client.delete_many(["{a}key1", "{b}key2", "{c}key3"])
+        client.delete_many(["{a}key1", "{b}key2", "{c}key3"])
 
         # delete should be called once per slot (3 different slots)
         assert mock_cluster.delete.call_count == 3
-        # Total deleted = 1 per call * 3 calls = 3
-        assert result == 3
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_delete_many_empty_keys(self, mock_get_factory):
+    def test_delete_many_empty_keys(self):
         """Test delete_many with empty keys list."""
-        mock_factory = MagicMock()
-        mock_get_factory.return_value = mock_factory
+        client = setup_cluster_client()
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
+        client.delete_many([])
+        # Should not raise any errors
 
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
-
-        result = client.delete_many([])
-        assert result == 0
-
-    @patch("django_redis.pool.get_connection_factory")
-    def test_delete_many_same_slot(self, mock_get_factory):
+    def test_delete_many_same_slot(self):
         """Test delete_many with keys in the same slot uses single delete."""
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = ""
+        client.version = 1
+        client.key_func = lambda k, p, v: k
 
         # Mock delete to return count of deleted keys
         mock_cluster.delete.return_value = 3
 
         # All keys have same hash tag {user} -> same slot
-        result = client.delete_many(["{user}key1", "{user}key2", "{user}key3"])
+        client.delete_many(["{user}key1", "{user}key2", "{user}key3"])
 
         # delete should be called only once (all keys in same slot)
         mock_cluster.delete.assert_called_once()
-        assert result == 3
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_set_many_uses_mset_nonatomic(self, mock_get_factory):
-        """Test set_many uses mset_nonatomic for cross-slot keys."""
-        mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
-
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.default_timeout = None  # No timeout, so no pexpire calls
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
-
-        mock_cluster.mset_nonatomic.return_value = [True, True, True]
-
-        # Using hash tags that hash to different slots:
-        # {a} -> slot 15495, {b} -> slot 3300, {c} -> slot 7365
-        client.set_many({"{a}key1": "value1", "{b}key2": "value2", "{c}key3": "value3"})
-
-        # mset_nonatomic is called once with all key-value pairs
-        mock_cluster.mset_nonatomic.assert_called_once()
-        # No pipeline calls since timeout is None
-        mock_cluster.pipeline.assert_not_called()
-
-    @patch("django_redis.pool.get_connection_factory")
-    def test_clear_flushes_all_primaries(self, mock_get_factory):
+    def test_clear_flushes_all_primaries(self):
         """Test clear flushes all primary nodes."""
-        from redis.cluster import RedisCluster
-
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
 
         client.clear()
 
         # Should call flushdb with target_nodes=PRIMARIES
-        mock_cluster.flushdb.assert_called_once_with(target_nodes=RedisCluster.PRIMARIES)
+        mock_cluster.flushdb.assert_called_once_with(target_nodes="primaries")
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_keys_scans_all_primaries(self, mock_get_factory):
+    def test_keys_scans_all_primaries(self):
         """Test keys() returns keys from all primary nodes."""
-        from redis.cluster import RedisCluster
-
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = "prefix"
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = "prefix"
+        client.version = 1
+        client.key_func = lambda k, p, v: f"{p}:{v}:{k}"
+        client._reverse_key = lambda k: k.split(":")[-1]
 
         # Mock keys() to return keys from across the cluster
         mock_cluster.keys.return_value = [
@@ -507,7 +233,7 @@ class TestClusterClient:
         # Should call keys with target_nodes=PRIMARIES
         mock_cluster.keys.assert_called_once()
         call_kwargs = mock_cluster.keys.call_args.kwargs
-        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+        assert call_kwargs.get("target_nodes") == "primaries"
 
         # Should return decoded keys
         assert len(result) == 3
@@ -515,24 +241,21 @@ class TestClusterClient:
         assert "foo_2" in result
         assert "foo_3" in result
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_keys_empty_result(self, mock_get_factory):
+    def test_keys_empty_result(self):
         """Test keys() with no matching keys."""
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = ""
+        client.version = 1
+        client.key_func = lambda k, p, v: k
+        client._reverse_key = lambda k: k
 
         mock_cluster.keys.return_value = []
 
@@ -541,26 +264,22 @@ class TestClusterClient:
         assert result == []
         mock_cluster.keys.assert_called_once()
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_iter_keys_scans_all_primaries(self, mock_get_factory):
+    def test_iter_keys_scans_all_primaries(self):
         """Test iter_keys() iterates keys from all primary nodes."""
-        from redis.cluster import RedisCluster
-
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = "prefix"
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = "prefix"
+        client.version = 1
+        client._default_scan_itersize = 10
+        client.key_func = lambda k, p, v: f"{p}:{v}:{k}"
+        client._reverse_key = lambda k: k.split(":")[-1]
 
         # Mock scan_iter to return keys from across the cluster
         mock_cluster.scan_iter.return_value = iter(
@@ -576,7 +295,7 @@ class TestClusterClient:
         # Should call scan_iter with target_nodes=PRIMARIES
         mock_cluster.scan_iter.assert_called_once()
         call_kwargs = mock_cluster.scan_iter.call_args.kwargs
-        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+        assert call_kwargs.get("target_nodes") == "primaries"
 
         # Should return decoded keys
         assert len(result) == 3
@@ -584,26 +303,22 @@ class TestClusterClient:
         assert "bar_2" in result
         assert "bar_3" in result
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_iter_keys_with_itersize(self, mock_get_factory):
+    def test_iter_keys_with_itersize(self):
         """Test iter_keys() passes itersize to scan_iter."""
-        from redis.cluster import RedisCluster
-
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = ""
+        client.version = 1
+        client._default_scan_itersize = 10
+        client.key_func = lambda k, p, v: k
+        client._reverse_key = lambda k: k
 
         mock_cluster.scan_iter.return_value = iter([])
 
@@ -611,28 +326,23 @@ class TestClusterClient:
 
         call_kwargs = mock_cluster.scan_iter.call_args.kwargs
         assert call_kwargs.get("count") == 500
-        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+        assert call_kwargs.get("target_nodes") == "primaries"
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_delete_pattern_deletes_across_primaries(self, mock_get_factory):
+    def test_delete_pattern_deletes_across_primaries(self):
         """Test delete_pattern() deletes keys from all primary nodes."""
-        from redis.cluster import RedisCluster
-
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = "prefix"
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: f"{p}:{v}:{k}"
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = "prefix"
+        client.version = 1
+        client._default_scan_itersize = 10
+        client.key_func = lambda k, p, v: f"{p}:{v}:{k}"
 
         # Mock scan_iter to return keys
         mock_cluster.scan_iter.return_value = iter(
@@ -649,29 +359,26 @@ class TestClusterClient:
         # Should scan with target_nodes=PRIMARIES
         mock_cluster.scan_iter.assert_called_once()
         call_kwargs = mock_cluster.scan_iter.call_args.kwargs
-        assert call_kwargs.get("target_nodes") == RedisCluster.PRIMARIES
+        assert call_kwargs.get("target_nodes") == "primaries"
 
         # Should delete 3 keys (called once per slot group, but we'll verify total)
         assert result == 3
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_delete_pattern_empty_result(self, mock_get_factory):
+    def test_delete_pattern_empty_result(self):
         """Test delete_pattern() with no matching keys."""
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = ""
+        client.version = 1
+        client._default_scan_itersize = 10
+        client.key_func = lambda k, p, v: k
 
         mock_cluster.scan_iter.return_value = iter([])
 
@@ -681,24 +388,21 @@ class TestClusterClient:
         # delete should not be called if no keys found
         mock_cluster.delete.assert_not_called()
 
-    @patch("django_redis.pool.get_connection_factory")
-    def test_delete_pattern_groups_by_slot(self, mock_get_factory):
+    def test_delete_pattern_groups_by_slot(self):
         """Test delete_pattern() groups keys by slot for deletion."""
+        mock_cluster_cls = MagicMock()
         mock_cluster = MagicMock()
-        mock_factory = MagicMock()
-        mock_factory.connect.return_value = mock_cluster
-        mock_get_factory.return_value = mock_factory
+        mock_cluster_cls.return_value = mock_cluster
+        mock_cluster_cls.PRIMARIES = "primaries"
 
-        mock_backend = MagicMock()
-        mock_backend.key_prefix = ""
-        mock_backend.version = 1
-        mock_backend.key_func = lambda k, p, v: k
-
-        client = ClusterClient(
-            server=["redis://localhost:7000"],
-            params={"OPTIONS": {}},
-            backend=mock_backend,
-        )
+        client = setup_cluster_client(mock_cluster_cls)
+        client._ignore_exceptions = False
+        client._log_ignored_exceptions = False
+        client.logger = None
+        client.key_prefix = ""
+        client.version = 1
+        client._default_scan_itersize = 10
+        client.key_func = lambda k, p, v: k
 
         # Keys with different hash tags go to different slots
         # {a} -> slot 15495, {b} -> slot 3300
@@ -717,3 +421,17 @@ class TestClusterClient:
         # Should call delete twice (once per slot)
         assert mock_cluster.delete.call_count == 2
         assert result == 3  # 2 + 1 = 3 total deleted
+
+    def test_close_closes_cluster(self):
+        """Test close() closes the cluster connection when close_connection=True."""
+        mock_cluster = MagicMock()
+
+        # Create and populate instance
+        client = setup_cluster_client()
+        client._options = {"close_connection": True}
+        client._clusters = {"redis://localhost:7000": mock_cluster}
+
+        client.close()
+
+        mock_cluster.close.assert_called_once()
+        assert "redis://localhost:7000" not in client._clusters

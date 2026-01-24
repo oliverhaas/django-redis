@@ -75,14 +75,14 @@ class TestHashOperations:
     def test_hash_key_is_prefixed_but_fields_are_not(self, cache: RedisCache):
         """Test that hash keys are prefixed but fields are not."""
         # Get raw Redis client
-        client = cache.client.get_client(write=False)
+        client = cache.get_client(write=False)
 
         # Set some hash data
         cache.hset("user:1000", "email", "alice@example.com", version=2)
         cache.hset("user:1000", "name", "Alice", version=2)
 
         # Get the actual Redis key that was created
-        expected_key = cache.client.make_key("user:1000", version=2)
+        expected_key = cache.make_key("user:1000", version=2)
 
         # Verify the hash exists in Redis with the prefixed key
         assert client.exists(expected_key)

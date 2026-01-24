@@ -2,30 +2,27 @@
 
 import json
 import pickle
-from unittest.mock import MagicMock
 
 import pytest
 
-from django_redis.client.default import DefaultClient
+from django_redis.client import RedisCacheClient
 from django_redis.exceptions import SerializerError
 from django_redis.serializers.json import JSONSerializer
 from django_redis.serializers.pickle import PickleSerializer
 
 
 class TestDefaultClientSerializerConfig:
-    """Tests for DefaultClient serializer configuration handling."""
+    """Tests for RedisCacheClient serializer configuration handling."""
 
     def test_single_string_config_backwards_compatible(self, redis_container):
         """Test that a single string config still works (backwards compatibility)."""
-        backend = MagicMock()
-        client = DefaultClient(
+        client = RedisCacheClient(
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
                     "serializer": "django_redis.serializers.pickle.PickleSerializer",
                 },
             },
-            backend=backend,
         )
 
         assert len(client._serializers) == 1
@@ -33,8 +30,7 @@ class TestDefaultClientSerializerConfig:
 
     def test_list_config_with_fallback(self, redis_container):
         """Test that a list config creates multiple serializers."""
-        backend = MagicMock()
-        client = DefaultClient(
+        client = RedisCacheClient(
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
@@ -44,7 +40,6 @@ class TestDefaultClientSerializerConfig:
                     ],
                 },
             },
-            backend=backend,
         )
 
         assert len(client._serializers) == 2
@@ -106,8 +101,7 @@ class TestDeserializeFallback:
 
     def test_deserialize_json_with_multiple_serializers(self, redis_container):
         """Test that _deserialize correctly deserializes JSON data."""
-        backend = MagicMock()
-        client = DefaultClient(
+        client = RedisCacheClient(
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
@@ -117,7 +111,6 @@ class TestDeserializeFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         data = {"key": "value", "number": 42}
@@ -127,8 +120,7 @@ class TestDeserializeFallback:
 
     def test_deserialize_pickle_with_json_first(self, redis_container):
         """Test that _deserialize falls back to pickle for pickle-serialized data."""
-        backend = MagicMock()
-        client = DefaultClient(
+        client = RedisCacheClient(
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
@@ -138,7 +130,6 @@ class TestDeserializeFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         data = {"key": "value", "number": 42}
@@ -149,8 +140,7 @@ class TestDeserializeFallback:
 
     def test_deserialize_raises_when_all_fail(self, redis_container):
         """Test that _deserialize raises SerializerError when all serializers fail."""
-        backend = MagicMock()
-        client = DefaultClient(
+        client = RedisCacheClient(
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
@@ -159,7 +149,6 @@ class TestDeserializeFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         # Invalid data that can't be deserialized as JSON
@@ -170,8 +159,7 @@ class TestDeserializeFallback:
 
     def test_deserialize_continues_on_failure(self, redis_container):
         """Test that _deserialize continues to next serializer on failure."""
-        backend = MagicMock()
-        client = DefaultClient(
+        client = RedisCacheClient(
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
@@ -181,7 +169,6 @@ class TestDeserializeFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         # Data that is valid pickle but not valid JSON

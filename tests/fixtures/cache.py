@@ -4,9 +4,8 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 import pytest
+from django.core.cache.backends.base import BaseCache
 from django.test import override_settings
-
-from django_redis.cache import BaseCache
 
 if TYPE_CHECKING:
     from tests.fixtures.containers import RedisContainerInfo, SentinelContainerInfo
@@ -27,16 +26,11 @@ SERIALIZERS = {
     "msgpack": "django_redis.serializers.msgpack.MSGPackSerializer",
 }
 
-# Available client classes
-CLIENT_CLASSES = {
-    "default": "django_redis.client.DefaultClient",
-    "sentinel": "django_redis.client.SentinelClient",
-    "cluster": "django_redis.client.ClusterClient",
-}
-
-# Connection factories for specific client types
-CONNECTION_FACTORIES = {
-    "cluster": "django_redis.pool.ClusterConnectionFactory",
+# Available cache backends
+BACKENDS = {
+    "default": "django_redis.client.RedisCacheClient",
+    "sentinel": "django_redis.client.SentinelCacheClient",
+    "cluster": "django_redis.client.ClusterCacheClient",
 }
 
 # Client library configurations: maps client_library -> (redis_client_class, pool_class, parser_class)
@@ -123,7 +117,7 @@ def build_cache_config(
     redis_host: str,
     redis_port: int,
     *,
-    client_class: str = "default",
+    backend: str = "default",
     compressor: str | None = None,
     serializer: str | None = None,
     client_library: str = "redis",
@@ -135,7 +129,7 @@ def build_cache_config(
     Args:
         redis_host: Redis server host
         redis_port: Redis server port
-        client_class: django-redis client class ("default", "sentinel", "cluster")
+        backend: django-redis backend ("default", "sentinel", "cluster")
         compressor: Compressor name (None, "gzip", "lz4", "zlib", "zstd")
         serializer: Serializer name (None, "json", "msgpack")
         client_library: Python client library ("redis" or "valkey")
@@ -143,8 +137,7 @@ def build_cache_config(
         db: Redis database number
 
     """
-    options = {"client_class": CLIENT_CLASSES[client_class]}
-    options.update(_get_client_library_options(client_library, native_parser))
+    options = _get_client_library_options(client_library, native_parser)
 
     if compressor and compressor in COMPRESSORS:
         options["compressor"] = COMPRESSORS[compressor]
@@ -152,25 +145,26 @@ def build_cache_config(
         options["serializer"] = SERIALIZERS[serializer]
 
     location = f"redis://{redis_host}:{redis_port}?db={db}"
+    backend_class = BACKENDS[backend]
 
     return {
         "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": [location, location],
             "OPTIONS": options,
         },
         "doesnotexist": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": f"redis://{redis_host}:56379?db={db}",
             "OPTIONS": options.copy(),
         },
         "sample": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": f"{location},{location}",
             "OPTIONS": options.copy(),
         },
         "with_prefix": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": location,
             "OPTIONS": options.copy(),
             "KEY_PREFIX": "test-prefix",
@@ -182,17 +176,14 @@ def build_sentinel_cache_config(
     sentinel_host: str,
     sentinel_port: int,
     *,
-    use_connection_factory_opts: bool = False,
     client_library: str = "redis",
     native_parser: bool = False,
     db: int = 7,
 ) -> dict:
     """Build a CACHES configuration for Sentinel."""
     sentinels = [(sentinel_host, sentinel_port)]
-    conn_factory = "django_redis.pool.SentinelConnectionFactory"
 
     base_options = {
-        "client_class": "django_redis.client.DefaultClient",
         "sentinels": sentinels,
     }
     # Get client library options but exclude pool_class - sentinel uses SentinelConnectionPool by default
@@ -200,30 +191,26 @@ def build_sentinel_cache_config(
     lib_options.pop("pool_class", None)
     base_options.update(lib_options)
 
-    if use_connection_factory_opts:
-        base_options["connection_factory"] = conn_factory
+    backend_class = BACKENDS["sentinel"]
 
     return {
         "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": [f"redis://mymaster?db={db}"],
             "OPTIONS": base_options.copy(),
         },
         "doesnotexist": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": f"redis://missing_service?db={db}",
             "OPTIONS": base_options.copy(),
         },
         "sample": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": f"redis://mymaster?db={db}",
-            "OPTIONS": {
-                **base_options,
-                "client_class": "django_redis.client.SentinelClient",
-            },
+            "OPTIONS": base_options.copy(),
         },
         "with_prefix": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": f"redis://mymaster?db={db}",
             "OPTIONS": base_options.copy(),
             "KEY_PREFIX": "test-prefix",
@@ -245,12 +232,9 @@ def build_cluster_cache_config(
     Note: Cluster mode currently only supports redis-py. When using valkey client_library,
     this function still uses redis-py's RedisCluster for cluster connections.
     """
-    options = {
-        "client_class": CLIENT_CLASSES["cluster"],
-        "connection_factory": CONNECTION_FACTORIES["cluster"],
-    }
+    options = {}
     # For cluster, we only use client library options for non-cluster connections
-    # The ClusterConnectionFactory creates RedisCluster directly
+    # The ClusterCacheClient creates RedisCluster directly
     # Note: Cluster mode currently only supports redis-py's RedisCluster
     if client_library == "redis":
         lib_options = _get_client_library_options(client_library, native_parser)
@@ -265,25 +249,26 @@ def build_cluster_cache_config(
 
     # Cluster doesn't use db numbers - data is sharded across slots
     location = f"redis://{cluster_host}:{cluster_port}"
+    backend_class = BACKENDS["cluster"]
 
     return {
         "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": location,
             "OPTIONS": options.copy(),
         },
         "doesnotexist": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": f"redis://{cluster_host}:56379",  # Non-existent port
             "OPTIONS": options.copy(),
         },
         "sample": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": location,
             "OPTIONS": options.copy(),
         },
         "with_prefix": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND": backend_class,
             "LOCATION": location,
             "OPTIONS": options.copy(),
             "KEY_PREFIX": "test-prefix",
@@ -292,18 +277,18 @@ def build_cluster_cache_config(
 
 
 def get_db_number(
-    client_class: str,
+    backend: str,
     compressor: str | None,
     serializer: str | None,
 ) -> int:
     """Calculate the db number based on configuration to avoid conflicts."""
-    return abs(hash((client_class, compressor, serializer))) % 14 + 1
+    return abs(hash((backend, compressor, serializer))) % 14 + 1
 
 
 def _make_cache(
     redis_container: "RedisContainerInfo",
     request: pytest.FixtureRequest,
-    client_class_val: str,
+    backend_val: str,
     sentinel_mode_val: str | bool,
     compressor_val: str | None,
     serializer_val: str | None,
@@ -317,27 +302,14 @@ def _make_cache(
     # Handle sentinel mode - it overrides other settings
     if sentinel_mode_val:
         sentinel_info: SentinelContainerInfo = request.getfixturevalue("sentinel_container")
-        use_opts = sentinel_mode_val == "sentinel_opts"
-        db = 8 if use_opts else 7
+        db = 8 if sentinel_mode_val == "sentinel_opts" else 7
         caches = build_sentinel_cache_config(
             sentinel_info.host,
             sentinel_info.port,
-            use_connection_factory_opts=use_opts,
             client_library=sentinel_info.client_library,
             native_parser=native_parser_val,
             db=db,
         )
-        if not use_opts:
-            with override_settings(
-                CACHES=caches,
-                DJANGO_REDIS_CONNECTION_FACTORY="django_redis.pool.SentinelConnectionFactory",
-            ):
-                from django.core.cache import cache as default_cache
-
-                default_cache.clear()  # Clear before test
-                yield default_cache
-                default_cache.clear()  # Clear after test
-            return
 
         with override_settings(CACHES=caches):
             from django.core.cache import cache as default_cache
@@ -348,7 +320,7 @@ def _make_cache(
         return
 
     # Handle cluster client - needs cluster_container instead of redis_container
-    if client_class_val == "cluster":
+    if backend_val == "cluster":
         cluster_host, cluster_port = request.getfixturevalue("cluster_container")
         caches = build_cluster_cache_config(
             cluster_host,
@@ -367,11 +339,11 @@ def _make_cache(
         return
 
     # Build cache config for default client
-    db = get_db_number(client_class_val, compressor_val, serializer_val)
+    db = get_db_number(backend_val, compressor_val, serializer_val)
     caches = build_cache_config(
         redis_host,
         redis_port,
-        client_class=client_class_val,
+        backend=backend_val,
         compressor=compressor_val,
         serializer=serializer_val,
         client_library=client_library,

@@ -113,63 +113,40 @@ class TestHasCompressionEnabled:
 
     def test_string_identity_returns_false(self):
         """Test that identity compressor string returns False."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": "django_redis.compressors.identity.IdentityCompressor",
                 },
             },
-            backend=backend,
         )
 
         assert client._has_compression_enabled() is False
 
     def test_string_gzip_returns_true(self):
         """Test that gzip compressor string returns True."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": "django_redis.compressors.gzip.GzipCompressor",
                 },
             },
-            backend=backend,
         )
 
         assert client._has_compression_enabled() is True
 
     def test_list_with_identity_first_returns_false(self):
         """Test that list with identity first returns False."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -178,24 +155,16 @@ class TestHasCompressionEnabled:
                     ],
                 },
             },
-            backend=backend,
         )
 
         assert client._has_compression_enabled() is False
 
     def test_list_with_none_first_returns_false(self):
         """Test that list with None first returns False."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -204,24 +173,16 @@ class TestHasCompressionEnabled:
                     ],
                 },
             },
-            backend=backend,
         )
 
         assert client._has_compression_enabled() is False
 
     def test_list_with_gzip_first_returns_true(self):
         """Test that list with gzip first returns True."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -230,7 +191,6 @@ class TestHasCompressionEnabled:
                     ],
                 },
             },
-            backend=backend,
         )
 
         assert client._has_compression_enabled() is True
@@ -241,17 +201,10 @@ class TestDecompressFallback:
 
     def test_decompress_gzip_with_multiple_compressors(self):
         """Test that _decompress correctly decompresses gzip data."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -261,7 +214,6 @@ class TestDecompressFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         data = b"Test data for compression! " * 50
@@ -271,17 +223,10 @@ class TestDecompressFallback:
 
     def test_decompress_zlib_with_fallback(self):
         """Test that _decompress falls back to zlib for zlib-compressed data."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -291,7 +236,6 @@ class TestDecompressFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         data = b"Test data for compression! " * 50
@@ -302,18 +246,11 @@ class TestDecompressFallback:
 
     def test_decompress_returns_raw_when_all_fail(self):
         """Test that _decompress returns raw bytes when all compressors fail."""
-        from unittest.mock import MagicMock
-
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
+        from django_redis.client import RedisCacheClient
 
         # Only gzip, no identity fallback
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -321,7 +258,6 @@ class TestDecompressFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         # Plain data that isn't gzip
@@ -330,17 +266,10 @@ class TestDecompressFallback:
 
     def test_decompress_with_identity_catches_all(self):
         """Test that identity compressor at end catches uncompressed data."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -349,7 +278,6 @@ class TestDecompressFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         data = b"Plain uncompressed data"
@@ -358,17 +286,10 @@ class TestDecompressFallback:
 
     def test_decompress_continues_on_failure(self):
         """Test that _decompress continues to next compressor on failure."""
-        from unittest.mock import MagicMock
+        from django_redis.client import RedisCacheClient
 
-        from django_redis.client.default import DefaultClient
-
-        backend = MagicMock()
-        backend.key_prefix = ""
-        backend.version = 1
-        backend.key_func = lambda k, p, v: k
-
-        client = DefaultClient(
-            server=["redis://localhost:6379"],
+        client = RedisCacheClient(
+            server="redis://localhost:6379",
             params={
                 "OPTIONS": {
                     "compressor": [
@@ -377,7 +298,6 @@ class TestDecompressFallback:
                     ],
                 },
             },
-            backend=backend,
         )
 
         # Data that looks like it could be gzip but isn't valid

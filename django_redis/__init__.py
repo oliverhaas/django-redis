@@ -9,10 +9,7 @@ def get_redis_connection(alias="default", write=True):
     cache = caches[alias]
 
     error_message = "This backend does not support this feature"
-    if not hasattr(cache, "client"):
+    if not hasattr(cache, "get_client"):
         raise NotImplementedError(error_message)
 
-    if not hasattr(cache.client, "get_client"):
-        raise NotImplementedError(error_message)
-
-    return cache.client.get_client(write)
+    return cache.get_client(write=write)

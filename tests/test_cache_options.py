@@ -132,7 +132,7 @@ def test_custom_key_function(cache: RedisCache, settings):
     keys = cache.keys("foo*")
     assert set(keys) == {"foo-bb", "foo-bc"}
     # ensure our custom function was actually called
-    client = cache.client.get_client(write=False)
+    client = cache.get_client(write=False)
     if isinstance(client, RedisCluster):
         # In cluster mode, query all primary nodes
         raw_keys = client.keys("*", target_nodes=RedisCluster.PRIMARIES)

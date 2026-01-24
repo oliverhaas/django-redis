@@ -1,5 +1,7 @@
 """Tests for pipeline operations."""
 
+import pytest
+
 from django_redis.cache import RedisCache
 
 
@@ -300,8 +302,12 @@ class TestPipelineSetOperations:
         assert results[0] == 2
         assert results[1] == {"a"}
 
-    def test_pipeline_sdiff_sinter_sunion(self, cache: RedisCache):
+    def test_pipeline_sdiff_sinter_sunion(self, cache: RedisCache, client_class: str):
         """Test set operations in pipeline."""
+        # Redis Cluster doesn't support sdiff/sinter/sunion in pipeline mode
+        if client_class == "cluster":
+            pytest.skip("sdiff/sinter/sunion blocked in cluster pipeline mode")
+
         # Use hash tags for cluster compatibility
         cache.sadd("{pipe_set}1", "a", "b", "c")
         cache.sadd("{pipe_set}2", "b", "c", "d")
@@ -338,8 +344,12 @@ class TestPipelineSetOperations:
 
         assert results[0] == [True, False, True]
 
-    def test_pipeline_smove(self, cache: RedisCache):
+    def test_pipeline_smove(self, cache: RedisCache, client_class: str):
         """Test smove in pipeline."""
+        # Redis Cluster doesn't support smove in pipeline mode
+        if client_class == "cluster":
+            pytest.skip("smove blocked in cluster pipeline mode")
+
         # Use hash tags for cluster compatibility
         cache.sadd("{pipe_smove}src", "a", "b")
         cache.sadd("{pipe_smove}dst", "x")
@@ -725,8 +735,12 @@ class TestPipelineMissingOperations:
         assert len(results[1]) == 2
         assert all(m in {"a", "b", "c"} for m in results[1])
 
-    def test_pipeline_sdiffstore(self, cache: RedisCache):
+    def test_pipeline_sdiffstore(self, cache: RedisCache, client_class: str):
         """Test sdiffstore in pipeline."""
+        # Redis Cluster doesn't support sdiffstore in pipeline mode
+        if client_class == "cluster":
+            pytest.skip("sdiffstore blocked in cluster pipeline mode")
+
         # Use hash tags for cluster compatibility
         cache.sadd("{sdiff}set1", "a", "b", "c")
         cache.sadd("{sdiff}set2", "b", "c", "d")
@@ -739,8 +753,12 @@ class TestPipelineMissingOperations:
         assert results[0] == 1  # Count of elements in result
         assert results[1] == {"a"}
 
-    def test_pipeline_sinterstore(self, cache: RedisCache):
+    def test_pipeline_sinterstore(self, cache: RedisCache, client_class: str):
         """Test sinterstore in pipeline."""
+        # Redis Cluster doesn't support sinterstore in pipeline mode
+        if client_class == "cluster":
+            pytest.skip("sinterstore blocked in cluster pipeline mode")
+
         # Use hash tags for cluster compatibility
         cache.sadd("{sinter}set1", "a", "b", "c")
         cache.sadd("{sinter}set2", "b", "c", "d")
@@ -753,8 +771,12 @@ class TestPipelineMissingOperations:
         assert results[0] == 2  # Count of elements in result
         assert results[1] == {"b", "c"}
 
-    def test_pipeline_sunionstore(self, cache: RedisCache):
+    def test_pipeline_sunionstore(self, cache: RedisCache, client_class: str):
         """Test sunionstore in pipeline."""
+        # Redis Cluster doesn't support sunionstore in pipeline mode
+        if client_class == "cluster":
+            pytest.skip("sunionstore blocked in cluster pipeline mode")
+
         # Use hash tags for cluster compatibility
         cache.sadd("{sunion}set1", "a", "b")
         cache.sadd("{sunion}set2", "c", "d")
