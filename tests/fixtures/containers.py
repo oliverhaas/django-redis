@@ -10,9 +10,15 @@ import pytest
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.waiting_utils import wait_for_logs
 
-# Available Redis-compatible images
-REDIS_IMAGES = ["redis:latest", "redis/redis-stack-server:latest", "valkey/valkey:latest"]
+# Available Redis-compatible images with their corresponding client library
+# Format: (image, client_library) where client_library is "redis" or "valkey"
+REDIS_IMAGES = [
+    ("redis:latest", "redis"),
+    ("redis/redis-stack-server:latest", "redis"),
+    ("valkey/valkey:latest", "valkey"),
+]
 DEFAULT_REDIS_IMAGE = "redis:latest"
+DEFAULT_CLIENT_LIBRARY = "redis"
 
 # Redis Cluster image (runs 6 nodes in single container: 3 masters + 3 replicas)
 # See: https://github.com/Grokzen/docker-redis-cluster
@@ -115,9 +121,14 @@ sentinel parallel-syncs mymaster 1
 ContainerFactory = Callable[[str], tuple[str, int]]
 
 
-@pytest.fixture(params=REDIS_IMAGES)
-def redis_images(request) -> str:
-    """Parametrized Redis image fixture. Request this to test all Redis-compatible images."""
+@pytest.fixture(params=REDIS_IMAGES, ids=lambda x: f"{x[0].split('/')[0]}-{x[1]}")
+def redis_images(request) -> tuple[str, str]:
+    """Parametrized Redis image fixture. Request this to test all Redis-compatible images.
+
+    Returns:
+        Tuple of (image_name, client_library) where client_library is "redis" or "valkey".
+
+    """
     return request.param
 
 
@@ -170,33 +181,69 @@ def sentinel_container_factory(
             info.container.stop()
 
 
+class RedisContainerInfo(NamedTuple):
+    """Redis container connection info with client library."""
+
+    host: str
+    port: int
+    client_library: str  # "redis" or "valkey"
+
+
 @pytest.fixture
 def redis_container(
     redis_container_factory: tuple[ContainerFactory, dict[str, ContainerInfo]],
     request: pytest.FixtureRequest,
-) -> tuple[str, int]:
-    """Get a Redis container, using redis_images if opted in."""
+) -> RedisContainerInfo:
+    """Get a Redis container, using redis_images if opted in.
+
+    Returns:
+        RedisContainerInfo with host, port, and client_library.
+
+    """
     factory, _ = redis_container_factory
-    image = request.getfixturevalue("redis_images") if "redis_images" in request.fixturenames else DEFAULT_REDIS_IMAGE
+    if "redis_images" in request.fixturenames:
+        image, client_library = request.getfixturevalue("redis_images")
+    else:
+        image = DEFAULT_REDIS_IMAGE
+        client_library = DEFAULT_CLIENT_LIBRARY
 
     host, port = factory(image)
     environ["REDIS_HOST"] = host
     environ["REDIS_PORT"] = str(port)
-    return host, port
+    environ["CLIENT_LIBRARY"] = client_library
+    return RedisContainerInfo(host, port, client_library)
+
+
+class SentinelContainerInfo(NamedTuple):
+    """Sentinel container connection info with client library."""
+
+    host: str
+    port: int
+    client_library: str  # "redis" or "valkey"
 
 
 @pytest.fixture
 def sentinel_container(
     sentinel_container_factory: ContainerFactory,
     request: pytest.FixtureRequest,
-) -> tuple[str, int]:
-    """Get a Sentinel container, using redis_images if opted in."""
-    image = request.getfixturevalue("redis_images") if "redis_images" in request.fixturenames else DEFAULT_REDIS_IMAGE
+) -> SentinelContainerInfo:
+    """Get a Sentinel container, using redis_images if opted in.
+
+    Returns:
+        SentinelContainerInfo with host, port, and client_library.
+
+    """
+    if "redis_images" in request.fixturenames:
+        image, client_library = request.getfixturevalue("redis_images")
+    else:
+        image = DEFAULT_REDIS_IMAGE
+        client_library = DEFAULT_CLIENT_LIBRARY
 
     host, port = sentinel_container_factory(image)
     environ["SENTINEL_HOST"] = host
     environ["SENTINEL_PORT"] = str(port)
-    return host, port
+    environ["CLIENT_LIBRARY"] = client_library
+    return SentinelContainerInfo(host, port, client_library)
 
 
 @pytest.fixture(scope="session")

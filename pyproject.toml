@@ -172,6 +172,10 @@ module = "msgpack"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "redis.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "valkey.*"
 ignore_missing_imports = true
 

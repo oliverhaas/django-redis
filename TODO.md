@@ -10,8 +10,11 @@ Features and changes we want to make.
 
 ## Planned Features
 
-- [ ] Support Valkey client (valkey-py)
+- [x] Support Valkey client (valkey-py)
   - Branches: `research/valkey-py`, `research/valkey-glide`
+  - Added valkey-py as optional dependency `[valkey]` and `[libvalkey]`
+  - Test fixtures couple server images with client libraries (redis→redis-py, valkey→valkey-py)
+  - Added native parser support (hiredis for redis-py, libvalkey for valkey-py)
 - [ ] Add async Django cache interface (official Django async cache API)
   - Branch: `feat/async-support`
 - [ ] Add async API for all other methods
@@ -84,6 +87,9 @@ Features and changes we want to make.
   - Enabled error codes: return-value, union-attr, operator, misc
   - Still disabled due to redis-py: arg-type (key types), assignment (Redis/RedisCluster), type-var (zadd)
   - mypy now passes with 0 errors
+- [ ] Review `[[tool.mypy.overrides]]` for optional dependencies
+  - Currently using `ignore_missing_imports = true` for: lz4, xdist, backports, compression, msgpack, redis, valkey
+  - As these libraries improve their type annotations, we may be able to remove some overrides
 - [ ] Clean up config as changes are made
 - [ ] Consider removing CacheKey
   - Marker class to prevent double-prefixing in `make_key()`
