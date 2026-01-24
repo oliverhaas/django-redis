@@ -876,20 +876,16 @@ class RedisCacheClient(KeyValueCacheClient[Redis]):
     _pool_class = ConnectionPool
 
 
-# Type variable for Sentinel class (Redis or Valkey Sentinel)
-SentinelT = TypeVar("SentinelT")
-SentinelPoolT = TypeVar("SentinelPoolT", bound=ConnectionPool)
-
-
-class KeyValueSentinelCacheClient(KeyValueCacheClient[ClientT], Generic[ClientT, SentinelT, SentinelPoolT]):
+class KeyValueSentinelCacheClient(KeyValueCacheClient[ClientT]):
     """Generic Sentinel cache backend base class.
 
     Automatically discovers primary and replica nodes via Sentinel.
     Subclass this for Redis or Valkey Sentinel support.
     """
 
-    _sentinel_class: type[SentinelT]
-    _sentinel_pool_class: type[SentinelPoolT]
+    # Subclasses must set these to the appropriate sentinel classes
+    _sentinel_class: type[Any]
+    _sentinel_pool_class: type[ConnectionPool]
 
     def __init__(self, server: str, params: dict[str, Any]) -> None:
         # Transform URL to add is_master query param for primary/replica
@@ -927,7 +923,7 @@ class KeyValueSentinelCacheClient(KeyValueCacheClient[ClientT], Generic[ClientT,
 
         return [replace_query(url, q) for q in (primary_query, replica_query)]
 
-    def _get_connection_pool(self, write: bool) -> SentinelPoolT:
+    def _get_connection_pool(self, write: bool) -> ConnectionPool:
         """Get a sentinel-managed connection pool."""
         index = self._get_connection_pool_index(write)
         url = self._servers[index]
@@ -963,7 +959,7 @@ class KeyValueSentinelCacheClient(KeyValueCacheClient[ClientT], Generic[ClientT,
         return pool
 
 
-class RedisSentinelCacheClient(KeyValueSentinelCacheClient[Redis, Sentinel, SentinelConnectionPool]):
+class RedisSentinelCacheClient(KeyValueSentinelCacheClient[Redis]):
     """Redis Sentinel cache backend.
 
     Automatically discovers primary and replica nodes via Redis Sentinel.
@@ -1289,7 +1285,7 @@ try:
     # from valkey.sentinel import Sentinel as ValkeySentinel
     # from valkey.sentinel import SentinelConnectionPool as ValkeySentinelConnectionPool
     #
-    # class ValkeySentinelCacheClient(KeyValueSentinelCacheClient[Valkey, ValkeySentinel, ValkeySentinelConnectionPool]):
+    # class ValkeySentinelCacheClient(KeyValueSentinelCacheClient[Valkey]):
     #     """Valkey Sentinel cache backend."""
     #     _client_class = Valkey
     #     _pool_class = ValkeySentinelConnectionPool
