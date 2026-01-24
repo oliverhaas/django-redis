@@ -6,6 +6,9 @@ This is the first release of django-redis-ng, a fork of django-redis.
 
 ### Changes from django-redis
 
+- Minimum Python version raised to 3.12
+- Minimum Django version raised to 5.2
+- Minimum redis-py version raised to 6.0 (released April 2025)
 - Migrated to `pyproject.toml` with hatchling build system
 - Switched to UV for package management
 - Modernized CI/CD with GitHub Actions
