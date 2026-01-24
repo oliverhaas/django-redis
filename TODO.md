@@ -98,10 +98,10 @@ Features and changes we want to make.
   - `blpop()`, `brpop()`, `blmove()` with timeout handling
 - [x] Add `blocking` parameter to `cache.lock()` (like django-redis has)
   - Made signature explicit: sleep, blocking, blocking_timeout, thread_local
-- [x] JSON serializer with datetime round-trip support
-  - Uses DjangoJSONEncoder for encoding (django-redis has this)
-  - Auto-detects ISO 8601 strings and parses back to datetime, date, time, timedelta (django-redis does NOT have this)
-  - Option to disable decoding: `JSON_DECODE_DATETIME: False`
+- [ ] JSON serializer with datetime round-trip support (optional)
+  - Currently uses DjangoJSONEncoder for encoding (same as django-redis)
+  - Decoding returns strings, not datetime objects (same as django-redis)
+  - Could add optional auto-detection of ISO 8601 strings in the future
 
 ## Testing
 
