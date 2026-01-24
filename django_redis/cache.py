@@ -297,9 +297,35 @@ class RedisCache(BaseCache):
         key: str,
         version: int | None = None,
         timeout: float | None = None,
-        **kwargs: Any,
+        sleep: float = 0.1,
+        blocking: bool = True,
+        blocking_timeout: float | None = None,
+        thread_local: bool = True,
     ) -> Any:
-        return self.client.lock(key, version=version, timeout=timeout, **kwargs)
+        """Acquire a distributed lock.
+
+        Args:
+            key: Lock key name
+            version: Key version
+            timeout: Lock timeout in seconds (None = no timeout)
+            sleep: Seconds to sleep between acquire attempts
+            blocking: If True, block until lock acquired or timeout
+            blocking_timeout: Max seconds to wait for lock (None = wait forever)
+            thread_local: If True, lock is thread-local (default)
+
+        Returns:
+            A lock object (context manager) from redis-py.
+
+        """
+        return self.client.lock(
+            key,
+            version=version,
+            timeout=timeout,
+            sleep=sleep,
+            blocking=blocking,
+            blocking_timeout=blocking_timeout,
+            thread_local=thread_local,
+        )
 
     @omit_exception
     def close(self, **kwargs: Any) -> None:
@@ -1030,6 +1056,47 @@ class RedisCache(BaseCache):
             destination,
             src_direction,
             dest_direction,
+            version=version,
+            client=client,
+        )
+
+    @omit_exception
+    def blpop(
+        self,
+        *keys: str,
+        timeout: float = 0,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> tuple[str, Any] | None:
+        return self.client.blpop(*keys, timeout=timeout, version=version, client=client)
+
+    @omit_exception
+    def brpop(
+        self,
+        *keys: str,
+        timeout: float = 0,
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> tuple[str, Any] | None:
+        return self.client.brpop(*keys, timeout=timeout, version=version, client=client)
+
+    @omit_exception
+    def blmove(
+        self,
+        source: str,
+        destination: str,
+        timeout: float = 0,
+        src_direction: str = "LEFT",
+        dest_direction: str = "RIGHT",
+        version: int | None = None,
+        client: Any | None = None,
+    ) -> Any | None:
+        return self.client.blmove(
+            source,
+            destination,
+            timeout=timeout,
+            src_direction=src_direction,
+            dest_direction=dest_direction,
             version=version,
             client=client,
         )

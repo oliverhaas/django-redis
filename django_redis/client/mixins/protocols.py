@@ -93,6 +93,16 @@ class RawClientProtocol(Protocol):
         src: str = "LEFT",
         dest: str = "RIGHT",
     ) -> Any: ...
+    def blpop(self, keys: Any, timeout: float = 0) -> Any: ...
+    def brpop(self, keys: Any, timeout: float = 0) -> Any: ...
+    def blmove(
+        self,
+        first_list: Any,
+        second_list: Any,
+        timeout: float,
+        src: str = "LEFT",
+        dest: str = "RIGHT",
+    ) -> Any: ...
 
     # Sorted set operations
     def zadd(

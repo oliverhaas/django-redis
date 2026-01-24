@@ -266,3 +266,101 @@ class ListMixin(ClientProtocol, Generic[RawClientT]):
         if result is None:
             return None
         return self.decode(result)
+
+    def blpop(
+        self,
+        *keys: KeyT,
+        timeout: float = 0,
+        version: int | None = None,
+        client: RawClientT | None = None,
+    ) -> tuple[str, Any] | None:
+        """Blocking pop from head of list.
+
+        Blocks until an element is available or timeout expires.
+
+        Args:
+            *keys: One or more list keys to pop from (first available)
+            timeout: Seconds to block (0 = block indefinitely)
+            version: Key version
+
+        Returns:
+            Tuple of (key, value) or None if timeout expires.
+
+        """
+        if client is None:
+            client = self.get_client(write=True)
+
+        nkeys = [self.make_key(key, version=version) for key in keys]
+        result = cast("tuple[bytes, bytes] | None", client.blpop(nkeys, timeout=timeout))
+        if result is None:
+            return None
+        key_bytes, value_bytes = result
+        return (key_bytes.decode(), self.decode(value_bytes))
+
+    def brpop(
+        self,
+        *keys: KeyT,
+        timeout: float = 0,
+        version: int | None = None,
+        client: RawClientT | None = None,
+    ) -> tuple[str, Any] | None:
+        """Blocking pop from tail of list.
+
+        Blocks until an element is available or timeout expires.
+
+        Args:
+            *keys: One or more list keys to pop from (first available)
+            timeout: Seconds to block (0 = block indefinitely)
+            version: Key version
+
+        Returns:
+            Tuple of (key, value) or None if timeout expires.
+
+        """
+        if client is None:
+            client = self.get_client(write=True)
+
+        nkeys = [self.make_key(key, version=version) for key in keys]
+        result = cast("tuple[bytes, bytes] | None", client.brpop(nkeys, timeout=timeout))
+        if result is None:
+            return None
+        key_bytes, value_bytes = result
+        return (key_bytes.decode(), self.decode(value_bytes))
+
+    def blmove(
+        self,
+        source: KeyT,
+        destination: KeyT,
+        timeout: float = 0,
+        src_direction: str = "LEFT",
+        dest_direction: str = "RIGHT",
+        version: int | None = None,
+        client: RawClientT | None = None,
+    ) -> Any | None:
+        """Blocking atomically move element from source list to destination list.
+
+        Blocks until an element is available in source or timeout expires.
+
+        Args:
+            source: Source list key
+            destination: Destination list key
+            timeout: Seconds to block (0 = block indefinitely)
+            src_direction: "LEFT" or "RIGHT" - which end to pop from source
+            dest_direction: "LEFT" or "RIGHT" - which end to push to destination
+
+        Returns:
+            The element being moved, or None if timeout expires.
+
+        """
+        if client is None:
+            client = self.get_client(write=True)
+
+        nsrc = self.make_key(source, version=version)
+        ndst = self.make_key(destination, version=version)
+        result = cast(
+            "bytes | None",
+            client.blmove(nsrc, ndst, timeout, src_direction, dest_direction),
+        )
+        if result is None:
+            return None
+        return self.decode(result)

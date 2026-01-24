@@ -228,3 +228,74 @@ class TestListOperations:
         result = cache.lmove("{list}empty_src", "{list}dst3", "LEFT", "RIGHT")
         assert result is None
         assert cache.lrange("{list}dst3", 0, -1) == ["x"]
+
+    def test_blpop_immediate(self, cache: RedisCache):
+        """Test blpop returns immediately when data exists."""
+        cache.rpush("blpop_list", "a", "b", "c")
+
+        result = cache.blpop("blpop_list", timeout=1)
+        assert result is not None
+        key, value = result
+        assert "blpop_list" in key  # Key includes prefix/version
+        assert value == "a"
+        assert cache.lrange("blpop_list", 0, -1) == ["b", "c"]
+
+    def test_blpop_timeout(self, cache: RedisCache):
+        """Test blpop returns None after timeout on empty list."""
+        result = cache.blpop("blpop_empty", timeout=0.1)
+        assert result is None
+
+    def test_blpop_multiple_keys(self, cache: RedisCache):
+        """Test blpop with multiple keys returns first available."""
+        # Use hash tags to ensure keys are on same cluster slot
+        cache.rpush("{blpop}list2", "x", "y")
+
+        result = cache.blpop("{blpop}list1", "{blpop}list2", timeout=1)
+        assert result is not None
+        key, value = result
+        assert "{blpop}list2" in key
+        assert value == "x"
+
+    def test_brpop_immediate(self, cache: RedisCache):
+        """Test brpop returns immediately when data exists."""
+        cache.rpush("brpop_list", "a", "b", "c")
+
+        result = cache.brpop("brpop_list", timeout=1)
+        assert result is not None
+        key, value = result
+        assert "brpop_list" in key
+        assert value == "c"
+        assert cache.lrange("brpop_list", 0, -1) == ["a", "b"]
+
+    def test_brpop_timeout(self, cache: RedisCache):
+        """Test brpop returns None after timeout on empty list."""
+        result = cache.brpop("brpop_empty", timeout=0.1)
+        assert result is None
+
+    def test_blmove_immediate(self, cache: RedisCache):
+        """Test blmove returns immediately when data exists."""
+        # Use hash tags to ensure keys are on same cluster slot
+        cache.rpush("{blmove}src", "a", "b", "c")
+        cache.rpush("{blmove}dst", "x")
+
+        result = cache.blmove("{blmove}src", "{blmove}dst", timeout=1, src_direction="LEFT", dest_direction="RIGHT")
+        assert result == "a"
+        assert cache.lrange("{blmove}src", 0, -1) == ["b", "c"]
+        assert cache.lrange("{blmove}dst", 0, -1) == ["x", "a"]
+
+    def test_blmove_timeout(self, cache: RedisCache):
+        """Test blmove returns None after timeout on empty source."""
+        # Use hash tags to ensure keys are on same cluster slot
+        cache.rpush("{blmove_empty}dst", "x")
+
+        result = cache.blmove("{blmove_empty}src", "{blmove_empty}dst", timeout=0.1)
+        assert result is None
+
+    def test_blpop_with_complex_values(self, cache: RedisCache):
+        """Test blpop works with serialized complex values."""
+        cache.rpush("blpop_complex", {"name": "Alice"}, {"name": "Bob"})
+
+        result = cache.blpop("blpop_complex", timeout=1)
+        assert result is not None
+        _key, value = result
+        assert value == {"name": "Alice"}

@@ -94,13 +94,14 @@ Features and changes we want to make.
 - [ ] Pipeline/transaction support
   - `pipeline()` context manager for batching
   - `MULTI`/`EXEC` transaction support
-- [ ] Blocking list operations
-  - `blpop()`, `brpop()`, `blmove()`, `brpoplpush()`
-  - Requires timeout handling
-- [ ] Add `blocking` parameter to `cache.lock()` (like django-redis has)
-- [ ] JSON serializer with datetime support
-  - django-redis JSONSerializer supports datetime, date, time, timedelta
-  - Our JSONSerializer only handles basic JSON types
+- [x] Blocking list operations
+  - `blpop()`, `brpop()`, `blmove()` with timeout handling
+- [x] Add `blocking` parameter to `cache.lock()` (like django-redis has)
+  - Made signature explicit: sleep, blocking, blocking_timeout, thread_local
+- [x] JSON serializer with datetime support
+  - Uses DjangoJSONEncoder for encoding
+  - Auto-detects ISO 8601 strings and parses datetime, date, time, timedelta
+  - Option to disable: `JSON_DECODE_DATETIME: False`
 
 ## Testing
 
