@@ -91,9 +91,13 @@ Features and changes we want to make.
 - [ ] Investigate Lua scripting support
   - `eval()`, `evalsha()`, `script_load()`
   - Useful for atomic operations
-- [ ] Pipeline/transaction support
-  - `pipeline()` context manager for batching
-  - `MULTI`/`EXEC` transaction support
+- [x] Pipeline/transaction support
+  - `pipeline()` context manager for batching commands
+  - `MULTI`/`EXEC` transaction support via `transaction=True` (default)
+  - Full support for lists, sets, hashes, sorted sets operations
+  - Proper key prefixing and value encoding/decoding
+  - Deferred decoder pattern for batch result processing
+  - Note: Redis Cluster requires hash tags for multi-key transactions
 - [x] Blocking list operations
   - `blpop()`, `brpop()`, `blmove()` with timeout handling
 - [x] Add `blocking` parameter to `cache.lock()` (like django-redis has)

@@ -301,6 +301,34 @@ class RedisCache(BaseCache):
             thread_local=thread_local,
         )
 
+    def pipeline(
+        self,
+        transaction: bool = True,
+        version: int | None = None,
+    ):
+        """Create a pipeline for batched Redis operations.
+
+        Pipelines queue commands and execute them in a single round-trip,
+        improving performance when running multiple commands.
+
+        Args:
+            transaction: If True (default), commands run atomically (MULTI/EXEC).
+            version: Default key version for all pipeline operations.
+
+        Returns:
+            Pipeline instance (context manager).
+
+        Example:
+            with cache.pipeline() as pipe:
+                pipe.set("key1", "value1")
+                pipe.get("key1")
+                pipe.lpush("mylist", "a", "b")
+                pipe.lrange("mylist", 0, -1)
+                results = pipe.execute()
+            # results = [True, "value1", 2, ["b", "a"]]
+        """
+        return self.client.pipeline(transaction=transaction, version=version)
+
     @omit_exception
     def close(self, **kwargs: Any) -> None:
         self.client.close(**kwargs)

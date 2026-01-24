@@ -227,6 +227,43 @@ class DefaultClient(
         if client is not None:
             self.connection_factory.disconnect(client)
 
+    def pipeline(
+        self,
+        transaction: bool = True,
+        version: int | None = None,
+        client: Redis | None = None,
+    ):
+        """Create a wrapped pipeline for batched operations.
+
+        The pipeline queues commands and executes them in a single round-trip.
+        Results are automatically decoded using the same serialization
+        configured for the cache.
+
+        Args:
+            transaction: If True (default), pipeline runs as MULTI/EXEC transaction.
+            version: Default key version for all pipeline operations.
+            client: Optional raw client to use (defaults to write client).
+
+        Returns:
+            Pipeline instance that can be used as a context manager.
+
+        Example:
+            with cache.client.pipeline() as pipe:
+                pipe.set("key1", "value1")
+                pipe.get("key1")
+                pipe.lpush("mylist", "a", "b", "c")
+                pipe.lrange("mylist", 0, -1)
+                results = pipe.execute()
+            # results = [True, "value1", 3, ["c", "b", "a"]]
+        """
+        from django_redis.client.pipeline import Pipeline
+
+        if client is None:
+            client = self.get_client(write=True)
+
+        raw_pipeline = client.pipeline(transaction=transaction)
+        return Pipeline(client=self, pipeline=raw_pipeline, version=version)
+
     def set(
         self,
         key: KeyT,
