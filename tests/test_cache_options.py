@@ -21,8 +21,7 @@ def reverse_key(key: str) -> str:
 @pytest.fixture
 def ignore_exceptions_cache(settings) -> RedisCache:
     caches_setting = copy.deepcopy(settings.CACHES)
-    caches_setting["doesnotexist"]["OPTIONS"]["IGNORE_EXCEPTIONS"] = True
-    caches_setting["doesnotexist"]["OPTIONS"]["LOG_IGNORED_EXCEPTIONS"] = True
+    caches_setting["doesnotexist"]["OPTIONS"]["ignore_exceptions"] = True
     settings.CACHES = caches_setting
     settings.DJANGO_REDIS_IGNORE_EXCEPTIONS = True
     settings.DJANGO_REDIS_LOG_IGNORED_EXCEPTIONS = True
@@ -53,7 +52,7 @@ def test_get_django_omit_exceptions(
 
 def test_get_django_omit_exceptions_priority_1(settings):
     caches_setting = copy.deepcopy(settings.CACHES)
-    caches_setting["doesnotexist"]["OPTIONS"]["IGNORE_EXCEPTIONS"] = True
+    caches_setting["doesnotexist"]["OPTIONS"]["ignore_exceptions"] = True
     settings.CACHES = caches_setting
     settings.DJANGO_REDIS_IGNORE_EXCEPTIONS = False
     cache = cast("RedisCache", caches["doesnotexist"])
@@ -63,7 +62,7 @@ def test_get_django_omit_exceptions_priority_1(settings):
 
 def test_get_django_omit_exceptions_priority_2(settings):
     caches_setting = copy.deepcopy(settings.CACHES)
-    caches_setting["doesnotexist"]["OPTIONS"]["IGNORE_EXCEPTIONS"] = False
+    caches_setting["doesnotexist"]["OPTIONS"]["ignore_exceptions"] = False
     settings.CACHES = caches_setting
     settings.DJANGO_REDIS_IGNORE_EXCEPTIONS = True
     cache = cast("RedisCache", caches["doesnotexist"])
@@ -121,7 +120,7 @@ def test_custom_key_function(cache: RedisCache, settings):
 
     caches_setting = copy.deepcopy(settings.CACHES)
     caches_setting["default"]["KEY_FUNCTION"] = "test_cache_options.make_key"
-    caches_setting["default"]["REVERSE_KEY_FUNCTION"] = "test_cache_options.reverse_key"
+    caches_setting["default"]["OPTIONS"]["reverse_key_function"] = "test_cache_options.reverse_key"
     settings.CACHES = caches_setting
 
     for key in ["foo-aa", "foo-ab", "foo-bb", "foo-bc"]:

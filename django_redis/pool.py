@@ -1,8 +1,9 @@
+"""Connection pool factories for Redis backends."""
+
 from typing import ClassVar
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import import_string
 from redis import Redis
 from redis.cluster import RedisCluster
@@ -10,255 +11,207 @@ from redis.connection import ConnectionPool, DefaultParser, to_bool
 from redis.sentinel import Sentinel
 
 
+# Known options that we handle explicitly (not passed to pool)
+_KNOWN_OPTIONS = frozenset({
+    "serializer",
+    "compressor",
+    "client_class",
+    "connection_factory",
+    "sentinels",
+    "sentinel_kwargs",
+    "ignore_exceptions",
+    "close_connection",
+    "reverse_key_function",
+})
+
+
 class ConnectionFactory:
-    # Store connection pool by cache backend options.
-    #
-    # _pools is a process-global, as otherwise _pools is cleared every time
-    # ConnectionFactory is instantiated, as Django creates new cache client
-    # (DefaultClient) instance for every request.
+    """Connection factory for standard Redis.
+
+    Creates and caches connection pools. Pools are cached process-globally
+    because Django creates new cache client instances for every request.
+    """
 
     _pools: ClassVar[dict[str, ConnectionPool]] = {}
 
-    def __init__(self, options):
-        pool_cls_path = options.get(
-            "CONNECTION_POOL_CLASS",
-            "redis.connection.ConnectionPool",
-        )
-        self.pool_cls = import_string(pool_cls_path)
-        self.pool_cls_kwargs = options.get("CONNECTION_POOL_KWARGS", {})
-
-        redis_client_cls_path = options.get("REDIS_CLIENT_CLASS", "redis.client.Redis")
-        self.redis_client_cls = import_string(redis_client_cls_path)
-        self.redis_client_cls_kwargs = options.get("REDIS_CLIENT_KWARGS", {})
-
+    def __init__(self, options: dict):
         self.options = options
 
-    def make_connection_params(self, url):
-        """Given a main connection parameters, build a complete
-        dict of connection parameters.
+        # Pool class - accept class or string path
+        pool_class = options.get("pool_class", ConnectionPool)
+        if isinstance(pool_class, str):
+            pool_class = import_string(pool_class)
+        self.pool_class = pool_class
+
+        # Parser class - accept class or string path
+        parser_class = options.get("parser_class", DefaultParser)
+        if isinstance(parser_class, str):
+            parser_class = import_string(parser_class)
+        self.parser_class = parser_class
+
+        # Redis client class
+        redis_client_class = options.get("redis_client_class", Redis)
+        if isinstance(redis_client_class, str):
+            redis_client_class = import_string(redis_client_class)
+        self.redis_client_class = redis_client_class
+
+    def _get_pool_options(self) -> dict:
+        """Get options to pass directly to ConnectionPool.from_url().
+
+        Unknown options are passed through to the pool, matching Django's behavior.
         """
-        kwargs = {
-            "url": url,
-            "parser_class": self.get_parser_cls(),
-        }
+        pool_options = {"parser_class": self.parser_class}
 
-        password = self.options.get("PASSWORD", None)
-        if password:
-            kwargs["password"] = password
+        # Pass through any option that's not in our known set
+        for key, value in self.options.items():
+            if key not in _KNOWN_OPTIONS and key not in ("pool_class", "parser_class", "redis_client_class"):
+                pool_options[key] = value
 
-        socket_timeout = self.options.get("SOCKET_TIMEOUT", None)
-        if socket_timeout:
-            if not isinstance(socket_timeout, int | float):
-                error_message = "Socket timeout should be float or integer"
-                raise ImproperlyConfigured(error_message)
-            kwargs["socket_timeout"] = socket_timeout
-
-        socket_connect_timeout = self.options.get("SOCKET_CONNECT_TIMEOUT", None)
-        if socket_connect_timeout:
-            if not isinstance(socket_connect_timeout, int | float):
-                error_message = "Socket connect timeout should be float or integer"
-                raise ImproperlyConfigured(error_message)
-            kwargs["socket_connect_timeout"] = socket_connect_timeout
-
-        return kwargs
+        return pool_options
 
     def connect(self, url: str) -> Redis:
-        """Given a basic connection parameters,
-        return a new connection.
-        """
-        params = self.make_connection_params(url)
-        return self.get_connection(params)
+        """Create a new Redis connection for the given URL."""
+        # Handle db option by appending to URL if not already specified
+        db = self.options.get("db")
+        if db is not None:
+            parsed = urlparse(url)
+            if not parsed.path or parsed.path == "/":
+                url = f"{url.rstrip('/')}/{db}"
+
+        pool = self._get_or_create_pool(url)
+        return self.redis_client_class(connection_pool=pool)
 
     def disconnect(self, connection: Redis) -> None:
-        """Given a not null client connection it disconnect from the Redis server.
-
-        The default implementation uses a pool to hold connections.
-        """
+        """Disconnect a Redis connection."""
         connection.connection_pool.disconnect()
 
-    def get_connection(self, params):
-        """Given a now preformatted params, return a
-        new connection.
+    def _get_or_create_pool(self, url: str) -> ConnectionPool:
+        """Get a cached pool or create a new one."""
+        if url not in self._pools:
+            self._pools[url] = self._create_pool(url)
+        return self._pools[url]
 
-        The default implementation uses a cached pools
-        for create new connection.
-        """
-        pool = self.get_or_create_connection_pool(params)
-        return self.redis_client_cls(
-            connection_pool=pool,
-            **self.redis_client_cls_kwargs,
-        )
-
-    def get_parser_cls(self):
-        cls = self.options.get("PARSER_CLASS", None)
-        if cls is None:
-            return DefaultParser
-        return import_string(cls)
-
-    def get_or_create_connection_pool(self, params):
-        """Given a connection parameters and return a new
-        or cached connection pool for them.
-
-        Reimplement this method if you want distinct
-        connection pool instance caching behavior.
-        """
-        key = params["url"]
-        if key not in self._pools:
-            self._pools[key] = self.get_connection_pool(params)
-        return self._pools[key]
-
-    def get_connection_pool(self, params):
-        """Given a connection parameters, return a new
-        connection pool for them.
-
-        Overwrite this method if you want a custom
-        behavior on creating connection pool.
-        """
-        cp_params = dict(params)
-        cp_params.update(self.pool_cls_kwargs)
-        pool = self.pool_cls.from_url(**cp_params)
-
-        if pool.connection_kwargs.get("password", None) is None:
-            pool.connection_kwargs["password"] = params.get("password", None)
-            pool.reset()
-
-        return pool
+    def _create_pool(self, url: str) -> ConnectionPool:
+        """Create a new connection pool."""
+        pool_options = self._get_pool_options()
+        return self.pool_class.from_url(url, **pool_options)
 
 
 class SentinelConnectionFactory(ConnectionFactory):
-    def __init__(self, options):
-        # allow overriding the default SentinelConnectionPool class
-        options.setdefault(
-            "CONNECTION_POOL_CLASS",
-            "redis.sentinel.SentinelConnectionPool",
-        )
+    """Connection factory for Redis Sentinel."""
+
+    def __init__(self, options: dict):
+        # Default to SentinelConnectionPool
+        options = dict(options)
+        options.setdefault("pool_class", "redis.sentinel.SentinelConnectionPool")
         super().__init__(options)
 
-        sentinels = options.get("SENTINELS")
+        sentinels = options.get("sentinels")
         if not sentinels:
-            error_message = "SENTINELS must be provided as a list of (host, port)."
-            raise ImproperlyConfigured(error_message)
+            msg = "sentinels must be provided as a list of (host, port) tuples"
+            raise ValueError(msg)
 
-        # provide the connection pool kwargs to the sentinel in case it
-        # needs to use the socket options for the sentinels themselves
-        connection_kwargs = self.make_connection_params(None)
-        connection_kwargs.pop("url")
-        connection_kwargs.update(self.pool_cls_kwargs)
+        # Create sentinel instance with connection options
+        sentinel_kwargs = options.get("sentinel_kwargs", {})
+        pool_options = self._get_pool_options()
+
         self._sentinel = Sentinel(
             sentinels,
-            sentinel_kwargs=options.get("SENTINEL_KWARGS"),
-            **connection_kwargs,
+            sentinel_kwargs=sentinel_kwargs,
+            **pool_options,
         )
 
-    def get_connection_pool(self, params):
-        """Given a connection parameters, return a new sentinel connection pool
-        for them.
-        """
-        url = urlparse(params["url"])
+    def _create_pool(self, url: str) -> ConnectionPool:
+        """Create a new sentinel connection pool."""
+        parsed = urlparse(url)
+        service_name = parsed.hostname
 
-        # explicitly set service_name and sentinel_manager for the
-        # SentinelConnectionPool constructor since will be called by from_url
-        cp_params = dict(params)
-        # convert "is_master" to a boolean if set on the URL, otherwise if not
-        # provided it defaults to True.
-        query_params = parse_qs(url.query)
-        is_master = query_params.get("is_master")
-        if is_master:
-            cp_params["is_master"] = to_bool(is_master[0])
-        # then remove the "is_master" query string from the URL
-        # so it doesn't interfere with the SentinelConnectionPool constructor
+        # Parse is_master from query string
+        query_params = parse_qs(parsed.query)
+        is_master = True
         if "is_master" in query_params:
+            is_master = to_bool(query_params["is_master"][0])
             del query_params["is_master"]
+
+        # Rebuild URL without is_master
         new_query = urlencode(query_params, doseq=True)
-
         new_url = urlunparse(
-            (url.scheme, url.netloc, url.path, url.params, new_query, url.fragment),
+            (parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment)
         )
 
-        cp_params.update(
-            service_name=url.hostname,
+        pool_options = self._get_pool_options()
+        pool_options.update(
+            service_name=service_name,
             sentinel_manager=self._sentinel,
-            url=new_url,
+            is_master=is_master,
         )
 
-        return super().get_connection_pool(cp_params)
+        return self.pool_class.from_url(new_url, **pool_options)
 
 
 class ClusterConnectionFactory:
     """Connection factory for Redis Cluster.
 
-    Redis Cluster manages its own connection pool internally, so this factory
-    creates and caches RedisCluster instances directly.
+    Redis Cluster manages its own connection pool internally.
     """
 
     _clusters: ClassVar[dict[str, RedisCluster]] = {}
 
-    def __init__(self, options):
+    def __init__(self, options: dict):
         self.options = options
-        self.redis_client_cls_kwargs = options.get("REDIS_CLIENT_KWARGS", {})
 
-    def make_connection_params(self, url: str) -> dict:
-        """Build connection parameters from URL and options."""
-        kwargs: dict = {}
+    def _get_cluster_options(self) -> dict:
+        """Get options to pass to RedisCluster."""
+        cluster_options = {}
 
-        # Parse the URL to extract host and port
-        parsed = urlparse(url)
-        if parsed.hostname:
-            kwargs["host"] = parsed.hostname
-        if parsed.port:
-            kwargs["port"] = parsed.port
+        for key, value in self.options.items():
+            if key not in _KNOWN_OPTIONS:
+                cluster_options[key] = value
 
-        password = self.options.get("PASSWORD", None)
-        if password:
-            kwargs["password"] = password
-
-        socket_timeout = self.options.get("SOCKET_TIMEOUT", None)
-        if socket_timeout:
-            if not isinstance(socket_timeout, int | float):
-                error_message = "Socket timeout should be float or integer"
-                raise ImproperlyConfigured(error_message)
-            kwargs["socket_timeout"] = socket_timeout
-
-        socket_connect_timeout = self.options.get("SOCKET_CONNECT_TIMEOUT", None)
-        if socket_connect_timeout:
-            if not isinstance(socket_connect_timeout, int | float):
-                error_message = "Socket connect timeout should be float or integer"
-                raise ImproperlyConfigured(error_message)
-            kwargs["socket_connect_timeout"] = socket_connect_timeout
-
-        return kwargs
+        return cluster_options
 
     def connect(self, url: str) -> RedisCluster:
         """Connect to a Redis Cluster."""
         if url in self._clusters:
             return self._clusters[url]
 
-        params = self.make_connection_params(url)
-        params.update(self.redis_client_cls_kwargs)
+        parsed = urlparse(url)
+        cluster_options = self._get_cluster_options()
 
-        cluster = RedisCluster(**params)
+        if parsed.hostname:
+            cluster_options["host"] = parsed.hostname
+        if parsed.port:
+            cluster_options["port"] = parsed.port
+
+        cluster = RedisCluster(**cluster_options)
         self._clusters[url] = cluster
         return cluster
 
     def disconnect(self, connection: RedisCluster) -> None:
-        """Disconnect from a Redis Cluster."""
+        """Disconnect from Redis Cluster."""
         connection.close()
-        # Remove from cache so next connect() creates a fresh connection
-        urls_to_remove = [url for url, cluster in self._clusters.items() if cluster is connection]
-        for url in urls_to_remove:
-            del self._clusters[url]
+        # Remove from cache
+        for url, cluster in list(self._clusters.items()):
+            if cluster is connection:
+                del self._clusters[url]
 
 
-def get_connection_factory(path=None, options=None):
-    if path is None:
-        path = getattr(
+def get_connection_factory(options: dict):
+    """Get the appropriate connection factory for the given options."""
+    # Check for explicit connection_factory option
+    factory_path = options.get("connection_factory")
+
+    # Fall back to global setting
+    if not factory_path:
+        factory_path = getattr(
             settings,
             "DJANGO_REDIS_CONNECTION_FACTORY",
             "django_redis.pool.ConnectionFactory",
         )
-    opt_conn_factory = options.get("CONNECTION_FACTORY")
-    if opt_conn_factory:
-        path = opt_conn_factory
 
-    cls = import_string(path)
-    return cls(options or {})
+    if isinstance(factory_path, str):
+        factory_class = import_string(factory_path)
+    else:
+        factory_class = factory_path
+
+    return factory_class(options)

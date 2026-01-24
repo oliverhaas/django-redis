@@ -8,17 +8,17 @@ class TestDefaultClientCompressorConfig:
     """Tests for DefaultClient compressor configuration handling."""
 
     def test_single_string_config_backwards_compatible(self, redis_container):
-        """Test that single string COMPRESSOR config still works."""
+        """Test that single string compressor config still works."""
         from django.test import override_settings
 
-        host, port = redis_container
+        host, port = redis_container.host, redis_container.port
 
         caches = {
             "default": {
                 "BACKEND": "django_redis.cache.RedisCache",
                 "LOCATION": f"redis://{host}:{port}?db=10",
                 "OPTIONS": {
-                    "COMPRESSOR": "django_redis.compressors.gzip.GzipCompressor",
+                    "compressor": "django_redis.compressors.gzip.GzipCompressor",
                 },
             },
         }
@@ -31,17 +31,17 @@ class TestDefaultClientCompressorConfig:
             cache.delete("test_key")
 
     def test_list_config_with_fallback(self, redis_container):
-        """Test that list COMPRESSOR config with fallback works."""
+        """Test that list compressor config with fallback works."""
         from django.test import override_settings
 
-        host, port = redis_container
+        host, port = redis_container.host, redis_container.port
 
         caches = {
             "default": {
                 "BACKEND": "django_redis.cache.RedisCache",
                 "LOCATION": f"redis://{host}:{port}?db=11",
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                         None,  # Identity compressor
                     ],
@@ -61,7 +61,7 @@ class TestDefaultClientCompressorConfig:
         """Test migrating from one compressor to another."""
         from django.test import override_settings
 
-        host, port = redis_container
+        host, port = redis_container.host, redis_container.port
 
         # Step 1: Write with zlib
         caches_zlib = {
@@ -69,7 +69,7 @@ class TestDefaultClientCompressorConfig:
                 "BACKEND": "django_redis.cache.RedisCache",
                 "LOCATION": f"redis://{host}:{port}?db=12",
                 "OPTIONS": {
-                    "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+                    "compressor": "django_redis.compressors.zlib.ZlibCompressor",
                 },
             },
         }
@@ -85,7 +85,7 @@ class TestDefaultClientCompressorConfig:
                 "BACKEND": "django_redis.cache.RedisCache",
                 "LOCATION": f"redis://{host}:{port}?db=12",
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                         "django_redis.compressors.zlib.ZlibCompressor",
                         None,
@@ -126,7 +126,7 @@ class TestHasCompressionEnabled:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": "django_redis.compressors.identity.IdentityCompressor",
+                    "compressor": "django_redis.compressors.identity.IdentityCompressor",
                 },
             },
             backend=backend,
@@ -149,7 +149,7 @@ class TestHasCompressionEnabled:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": "django_redis.compressors.gzip.GzipCompressor",
+                    "compressor": "django_redis.compressors.gzip.GzipCompressor",
                 },
             },
             backend=backend,
@@ -172,7 +172,7 @@ class TestHasCompressionEnabled:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.identity.IdentityCompressor",
                         "django_redis.compressors.gzip.GzipCompressor",
                     ],
@@ -198,7 +198,7 @@ class TestHasCompressionEnabled:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         None,
                         "django_redis.compressors.gzip.GzipCompressor",
                     ],
@@ -224,7 +224,7 @@ class TestHasCompressionEnabled:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                         None,
                     ],
@@ -254,7 +254,7 @@ class TestDecompressFallback:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                         "django_redis.compressors.zlib.ZlibCompressor",
                         None,
@@ -284,7 +284,7 @@ class TestDecompressFallback:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                         "django_redis.compressors.zlib.ZlibCompressor",
                         None,
@@ -316,7 +316,7 @@ class TestDecompressFallback:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                     ],
                 },
@@ -343,7 +343,7 @@ class TestDecompressFallback:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                         None,  # Identity
                     ],
@@ -371,7 +371,7 @@ class TestDecompressFallback:
             server=["redis://localhost:6379"],
             params={
                 "OPTIONS": {
-                    "COMPRESSOR": [
+                    "compressor": [
                         "django_redis.compressors.gzip.GzipCompressor",
                         None,
                     ],

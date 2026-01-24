@@ -17,6 +17,7 @@ from redis.typing import AbsExpiryT, EncodableT, ExpiryT, KeyT
 
 from django_redis import pool
 from django_redis.client.mixins import HashMixin, ListMixin, RawClientT, SetMixin, SortedSetMixin
+from django_redis.compat import create_compressor, create_serializer
 from django_redis.exceptions import CompressorError, ConnectionInterrupted, SerializerError
 from django_redis.util import CacheKey
 
@@ -54,9 +55,10 @@ class DefaultClient(
     ) -> None:
         self._backend = backend
         self._params = params
+        self._options = params.get("OPTIONS", {})
 
         self.reverse_key = get_key_func(
-            params.get("REVERSE_KEY_FUNCTION") or "django_redis.util.default_reverse_key",
+            self._options.get("reverse_key_function") or "django_redis.util.default_reverse_key",
         )
 
         if not server:
@@ -69,20 +71,16 @@ class DefaultClient(
             self._server = list(server)
 
         self._clients: list[Redis | RedisCluster | None] = [None] * len(self._server)
-        self._options = params.get("OPTIONS", {})
-        self._replica_read_only = self._options.get("REPLICA_READ_ONLY", True)
 
+        # Serializer config: string path, class, instance, or list of these
         serializer_config = self._options.get(
-            "SERIALIZER",
+            "serializer",
             "django_redis.serializers.pickle.PickleSerializer",
         )
-
-        compressor_config = self._options.get(
-            "COMPRESSOR",
-            "django_redis.compressors.identity.IdentityCompressor",
-        )
-
         self._serializers = self._create_serializers(serializer_config)
+
+        # Compressor config: string path, class, instance, or list of these
+        compressor_config = self._options.get("compressor")
         self._compressors = self._create_compressors(compressor_config)
 
         self.connection_factory = pool.get_connection_factory(options=self._options)
@@ -90,68 +88,42 @@ class DefaultClient(
     def __contains__(self, key: KeyT) -> bool:
         return self.has_key(key)
 
-    def _create_serializers(self, serializer_config: str | list) -> list:
+    def _create_serializers(self, config: str | list | type | Any) -> list:
         """Create serializer instance(s) from config.
 
         Args:
-            serializer_config: Either a single serializer class path (string)
-                or a list of serializer paths for fallback support.
-
-        Returns:
-            List of serializer instances.
-            - First serializer is used for serialization (writing)
-            - All serializers are tried for deserialization (reading)
-
+            config: A string path, class, instance, or list of these.
+                First serializer is used for writing, all are tried for reading.
         """
-        if isinstance(serializer_config, list):
-            serializers = []
-            for path in serializer_config:
-                serializer_cls = import_string(path)
-                serializers.append(serializer_cls(options=self._options))
-            return serializers
+        if isinstance(config, list):
+            return [create_serializer(item, self._options) for item in config]
+        return [create_serializer(config, self._options)]
 
-        # Single serializer - wrap in list for consistent handling
-        serializer_cls = import_string(serializer_config)
-        return [serializer_cls(options=self._options)]
-
-    def _create_compressors(self, compressor_config: str | list) -> list:
+    def _create_compressors(self, config: str | list | type | Any | None) -> list:
         """Create compressor instance(s) from config.
 
         Args:
-            compressor_config: Either a single compressor class path (string)
-                or a list of compressor paths for fallback support.
-
-        Returns:
-            List of compressor instances.
-            - First compressor is used for compression (writing)
-            - All compressors are tried for decompression (reading)
-
+            config: A string path, class, instance, list of these, or None for no compression.
+                First compressor is used for writing, all are tried for reading.
         """
-        if isinstance(compressor_config, list):
-            compressors = []
-            for path in compressor_config:
-                actual_path = path or "django_redis.compressors.identity.IdentityCompressor"
-                compressor_cls = import_string(actual_path)
-                compressors.append(compressor_cls(options=self._options))
-            return compressors
-
-        # Single compressor - wrap in list for consistent handling
-        compressor_cls = import_string(compressor_config)
-        return [compressor_cls(options=self._options)]
+        if config is None:
+            # No compression - use identity compressor
+            return [create_compressor("django_redis.compressors.identity.IdentityCompressor")]
+        if isinstance(config, list):
+            return [create_compressor(item, self._options) for item in config]
+        return [create_compressor(config, self._options)]
 
     def _has_compression_enabled(self) -> bool:
-        compressor_config = self._options.get(
-            "COMPRESSOR",
-            "django_redis.compressors.identity.IdentityCompressor",
-        )
-        if isinstance(compressor_config, list):
-            # Check if primary (first) compressor is not identity
-            primary = compressor_config[0] if compressor_config else None
-            return primary not in (
-                None,
-                "django_redis.compressors.identity.IdentityCompressor",
-            )
-        return compressor_config != "django_redis.compressors.identity.IdentityCompressor"
+        """Check if compression is enabled (first compressor is not identity).
+
+        Returns:
+            True if the first compressor performs actual compression, False otherwise.
+        """
+        if not self._compressors:
+            return False
+        # Check if the first compressor is the identity compressor
+        first_compressor = self._compressors[0]
+        return first_compressor.__class__.__name__ != "IdentityCompressor"
 
     def get_next_client_index(
         self,
@@ -936,7 +908,7 @@ class DefaultClient(
 
     def close(self) -> None:
         close_flag = self._options.get(
-            "CLOSE_CONNECTION",
+            "close_connection",
             getattr(settings, "DJANGO_REDIS_CLOSE_CONNECTION", False),
         )
         if close_flag:

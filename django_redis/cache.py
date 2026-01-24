@@ -33,14 +33,15 @@ class RedisCache(BaseCache):
 
         options = params.get("OPTIONS", {})
         self._client_cls = options.get(
-            "CLIENT_CLASS",
+            "client_class",
             "django_redis.client.DefaultClient",
         )
-        self._client_cls = import_string(self._client_cls)
+        if isinstance(self._client_cls, str):
+            self._client_cls = import_string(self._client_cls)
         self._client = None
 
         self._ignore_exceptions = options.get(
-            "IGNORE_EXCEPTIONS",
+            "ignore_exceptions",
             getattr(settings, "DJANGO_REDIS_IGNORE_EXCEPTIONS", False),
         )
         self._log_ignored_exceptions = getattr(

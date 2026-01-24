@@ -48,7 +48,7 @@ class TestClientClose:
         settings: SettingsWrapper,
     ):
         caches = settings.CACHES
-        caches[DEFAULT_CACHE_ALIAS]["OPTIONS"]["CLOSE_CONNECTION"] = True
+        caches[DEFAULT_CACHE_ALIAS]["OPTIONS"]["close_connection"] = True
         with override_settings(CACHES=caches):
             cache_client.set("TestClientClose", 0)
             mock = mocker.patch.object(cache_client.connection_factory, "disconnect")
@@ -60,7 +60,7 @@ class TestClientClose:
         cache_client: DefaultClient,
         mocker: MockerFixture,
     ):
-        cache_client._options["CLOSE_CONNECTION"] = True
+        cache_client._options["close_connection"] = True
         mock = mocker.patch.object(cache_client.connection_factory, "disconnect")
         cache_client.close()
         assert mock.called

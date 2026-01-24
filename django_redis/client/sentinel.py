@@ -34,7 +34,7 @@ class SentinelClient(DefaultClient):
         if not isinstance(connection.connection_pool, SentinelConnectionPool):
             error_message = (
                 "Settings DJANGO_REDIS_CONNECTION_FACTORY or "
-                "CACHE[].OPTIONS.CONNECTION_POOL_CLASS is not configured correctly."
+                "CACHE[].OPTIONS.connection_factory is not configured correctly."
             )
             raise ImproperlyConfigured(error_message)
 

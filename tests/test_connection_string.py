@@ -1,22 +1,77 @@
-import pytest
+"""Tests for connection string/URL handling."""
 
-from django_redis import pool
+import pytest
+from django.test import override_settings
+from django.core.cache import caches
+
+
+# Test that various URL formats work with the cache backend
+# These tests verify that URLs are properly handled when creating connections
 
 
 @pytest.mark.parametrize(
-    "connection_string",
+    "url_path",
     [
-        "unix://tmp/foo.bar?db=1",
-        "redis://localhost/2",
-        "redis://redis-master/0?is_master=0",
-        "redis://redis-master/2?is_master=False",
-        "rediss://localhost:3333?db=2",
+        "/0",
+        "/1",
+        "/2",
     ],
 )
-def test_connection_strings(connection_string: str):
-    cf = pool.get_connection_factory(
-        path="django_redis.pool.ConnectionFactory",
-        options={},
-    )
-    res = cf.make_connection_params(connection_string)
-    assert res["url"] == connection_string
+def test_db_in_url(redis_container, url_path):
+    """Test that db number in URL path works."""
+    host = redis_container.host
+    port = redis_container.port
+
+    caches_config = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": f"redis://{host}:{port}{url_path}",
+        },
+    }
+
+    with override_settings(CACHES=caches_config):
+        cache = caches["default"]
+        cache.set("test_db_url", "value")
+        assert cache.get("test_db_url") == "value"
+        cache.delete("test_db_url")
+
+
+def test_db_in_query_string(redis_container):
+    """Test that db number in query string works."""
+    host = redis_container.host
+    port = redis_container.port
+
+    caches_config = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": f"redis://{host}:{port}?db=3",
+        },
+    }
+
+    with override_settings(CACHES=caches_config):
+        cache = caches["default"]
+        cache.set("test_db_query", "value")
+        assert cache.get("test_db_query") == "value"
+        cache.delete("test_db_query")
+
+
+def test_db_in_options(redis_container):
+    """Test that db number in OPTIONS works (Django-style)."""
+    host = redis_container.host
+    port = redis_container.port
+
+    caches_config = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": f"redis://{host}:{port}",  # No db in URL
+            "OPTIONS": {
+                "db": 4,
+            },
+        },
+    }
+
+    with override_settings(CACHES=caches_config):
+        cache = caches["default"]
+        cache.set("test_db_options", "value")
+        assert cache.get("test_db_options") == "value"
+        cache.delete("test_db_options")

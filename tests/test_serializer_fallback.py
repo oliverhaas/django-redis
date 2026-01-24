@@ -22,7 +22,7 @@ class TestDefaultClientSerializerConfig:
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
-                    "SERIALIZER": "django_redis.serializers.pickle.PickleSerializer",
+                    "serializer": "django_redis.serializers.pickle.PickleSerializer",
                 },
             },
             backend=backend,
@@ -38,7 +38,7 @@ class TestDefaultClientSerializerConfig:
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
-                    "SERIALIZER": [
+                    "serializer": [
                         "django_redis.serializers.json.JSONSerializer",
                         "django_redis.serializers.pickle.PickleSerializer",
                     ],
@@ -55,7 +55,7 @@ class TestDefaultClientSerializerConfig:
         """Test a realistic migration scenario from pickle to JSON."""
         from django.test import override_settings
 
-        host, port = redis_container
+        host, port = redis_container.host, redis_container.port
 
         # Step 1: Write with pickle (simulated old data)
         caches_pickle = {
@@ -63,7 +63,7 @@ class TestDefaultClientSerializerConfig:
                 "BACKEND": "django_redis.cache.RedisCache",
                 "LOCATION": f"redis://{host}:{port}?db=10",
                 "OPTIONS": {
-                    "SERIALIZER": "django_redis.serializers.pickle.PickleSerializer",
+                    "serializer": "django_redis.serializers.pickle.PickleSerializer",
                 },
             },
         }
@@ -79,7 +79,7 @@ class TestDefaultClientSerializerConfig:
                 "BACKEND": "django_redis.cache.RedisCache",
                 "LOCATION": f"redis://{host}:{port}?db=10",
                 "OPTIONS": {
-                    "SERIALIZER": [
+                    "serializer": [
                         "django_redis.serializers.json.JSONSerializer",
                         "django_redis.serializers.pickle.PickleSerializer",
                     ],
@@ -111,7 +111,7 @@ class TestDeserializeFallback:
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
-                    "SERIALIZER": [
+                    "serializer": [
                         "django_redis.serializers.json.JSONSerializer",
                         "django_redis.serializers.pickle.PickleSerializer",
                     ],
@@ -132,7 +132,7 @@ class TestDeserializeFallback:
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
-                    "SERIALIZER": [
+                    "serializer": [
                         "django_redis.serializers.json.JSONSerializer",
                         "django_redis.serializers.pickle.PickleSerializer",
                     ],
@@ -154,7 +154,7 @@ class TestDeserializeFallback:
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
-                    "SERIALIZER": [
+                    "serializer": [
                         "django_redis.serializers.json.JSONSerializer",
                     ],
                 },
@@ -175,7 +175,7 @@ class TestDeserializeFallback:
             server="redis://localhost:6379/0",
             params={
                 "OPTIONS": {
-                    "SERIALIZER": [
+                    "serializer": [
                         "django_redis.serializers.json.JSONSerializer",
                         "django_redis.serializers.pickle.PickleSerializer",
                     ],

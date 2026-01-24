@@ -39,18 +39,18 @@ CONNECTION_FACTORIES = {
     "cluster": "django_redis.pool.ClusterConnectionFactory",
 }
 
-# Client library configurations: maps client_library -> (client_class, connection_pool_class, parser_class)
+# Client library configurations: maps client_library -> (redis_client_class, pool_class, parser_class)
 # parser_class is the Python parser, native_parser_class is hiredis/libvalkey parser
 CLIENT_LIBRARY_CONFIGS = {
     "redis": {
-        "client_class": "redis.client.Redis",
-        "connection_pool_class": "redis.connection.ConnectionPool",
+        "redis_client_class": "redis.client.Redis",
+        "pool_class": "redis.connection.ConnectionPool",
         "parser_class": "redis._parsers.resp2._RESP2Parser",  # Python parser
         "native_parser_class": "redis._parsers.hiredis._HiredisParser",
     },
     "valkey": {
-        "client_class": "valkey.Valkey",
-        "connection_pool_class": "valkey.connection.ConnectionPool",
+        "redis_client_class": "valkey.Valkey",
+        "pool_class": "valkey.connection.ConnectionPool",
         "parser_class": "valkey._parsers.resp2._RESP2Parser",  # Python parser
         "native_parser_class": "valkey._parsers.libvalkey._LibvalkeyParser",
     },
@@ -103,19 +103,19 @@ def _get_client_library_options(
         native_parser: If True, use hiredis/libvalkey parser; else use Python parser
 
     Returns:
-        Dict with REDIS_CLIENT_CLASS, CONNECTION_POOL_CLASS, and PARSER_CLASS
+        Dict with redis_client_class, pool_class, and parser_class
 
     """
     config = CLIENT_LIBRARY_CONFIGS.get(client_library, CLIENT_LIBRARY_CONFIGS["redis"])
     options = {
-        "REDIS_CLIENT_CLASS": config["client_class"],
-        "CONNECTION_POOL_CLASS": config["connection_pool_class"],
+        "redis_client_class": config["redis_client_class"],
+        "pool_class": config["pool_class"],
     }
-    # Always set PARSER_CLASS explicitly to control which parser is used
+    # Always set parser_class explicitly to control which parser is used
     if native_parser:
-        options["PARSER_CLASS"] = config["native_parser_class"]
+        options["parser_class"] = config["native_parser_class"]
     else:
-        options["PARSER_CLASS"] = config["parser_class"]
+        options["parser_class"] = config["parser_class"]
     return options
 
 
@@ -143,13 +143,13 @@ def build_cache_config(
         db: Redis database number
 
     """
-    options = {"CLIENT_CLASS": CLIENT_CLASSES[client_class]}
+    options = {"client_class": CLIENT_CLASSES[client_class]}
     options.update(_get_client_library_options(client_library, native_parser))
 
     if compressor and compressor in COMPRESSORS:
-        options["COMPRESSOR"] = COMPRESSORS[compressor]
+        options["compressor"] = COMPRESSORS[compressor]
     if serializer and serializer in SERIALIZERS:
-        options["SERIALIZER"] = SERIALIZERS[serializer]
+        options["serializer"] = SERIALIZERS[serializer]
 
     location = f"redis://{redis_host}:{redis_port}?db={db}"
 
@@ -192,13 +192,16 @@ def build_sentinel_cache_config(
     conn_factory = "django_redis.pool.SentinelConnectionFactory"
 
     base_options = {
-        "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        "SENTINELS": sentinels,
+        "client_class": "django_redis.client.DefaultClient",
+        "sentinels": sentinels,
     }
-    base_options.update(_get_client_library_options(client_library, native_parser))
+    # Get client library options but exclude pool_class - sentinel uses SentinelConnectionPool by default
+    lib_options = _get_client_library_options(client_library, native_parser)
+    lib_options.pop("pool_class", None)
+    base_options.update(lib_options)
 
     if use_connection_factory_opts:
-        base_options["CONNECTION_FACTORY"] = conn_factory
+        base_options["connection_factory"] = conn_factory
 
     return {
         "default": {
@@ -216,7 +219,7 @@ def build_sentinel_cache_config(
             "LOCATION": f"redis://mymaster?db={db}",
             "OPTIONS": {
                 **base_options,
-                "CLIENT_CLASS": "django_redis.client.SentinelClient",
+                "client_class": "django_redis.client.SentinelClient",
             },
         },
         "with_prefix": {
@@ -243,8 +246,8 @@ def build_cluster_cache_config(
     this function still uses redis-py's RedisCluster for cluster connections.
     """
     options = {
-        "CLIENT_CLASS": CLIENT_CLASSES["cluster"],
-        "CONNECTION_FACTORY": CONNECTION_FACTORIES["cluster"],
+        "client_class": CLIENT_CLASSES["cluster"],
+        "connection_factory": CONNECTION_FACTORIES["cluster"],
     }
     # For cluster, we only use client library options for non-cluster connections
     # The ClusterConnectionFactory creates RedisCluster directly
@@ -252,13 +255,13 @@ def build_cluster_cache_config(
     if client_library == "redis":
         lib_options = _get_client_library_options(client_library, native_parser)
         # Remove pool class - cluster manages its own connections
-        lib_options.pop("CONNECTION_POOL_CLASS", None)
+        lib_options.pop("pool_class", None)
         options.update(lib_options)
 
     if compressor and compressor in COMPRESSORS:
-        options["COMPRESSOR"] = COMPRESSORS[compressor]
+        options["compressor"] = COMPRESSORS[compressor]
     if serializer and serializer in SERIALIZERS:
-        options["SERIALIZER"] = SERIALIZERS[serializer]
+        options["serializer"] = SERIALIZERS[serializer]
 
     # Cluster doesn't use db numbers - data is sharded across slots
     location = f"redis://{cluster_host}:{cluster_port}"
