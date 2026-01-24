@@ -141,13 +141,17 @@ Features and changes we want to make.
 - [ ] Clean up config as changes are made
 - [ ] Consider removing CacheKey
   - Marker class to prevent double-prefixing in `make_key()`
-  - `make_key()` is only called internally, so double-prefixing shouldn't happen
-  - May be unnecessary defensive programming
+  - Provides `original_key()` for version increment
+  - Same pattern exists in original django-redis
+  - Keys are never handed back to the user, so no user-facing purpose
+  - Internal logic shouldn't require it either
+  - Only guards against someone calling `make_key()` and confusing original key with prefixed key
 - [ ] Add docstrings incrementally
   - Currently using `"D"` ignore in ruff for docstrings
   - Start with public API methods
   - Use Google-style docstrings
-- [ ] Verify py.typed marker is present for PEP 561
+- [x] Verify py.typed marker is present for PEP 561
+  - Added `django_redis/py.typed` marker file
   - Allows type checkers to use our type hints
 
 ## Tooling/Infrastructure
