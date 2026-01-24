@@ -67,11 +67,58 @@ Features and changes we want to make.
   - Didn't support incr/decr and many other methods
   - If needed, could be re-implemented as optional middleware in the future
 
+## Naming / API
+
+- [ ] Consider renaming "redis" terminology now that Valkey is supported
+  - Package name: `django_redis` → `django_kvstore` or similar?
+  - Class names: `RedisCache`, `get_redis_connection()`
+  - Option names: `REDIS_CLIENT_CLASS`, `REDIS_CLIENT_KWARGS`
+  - Would require major version bump and deprecation period
+  - May not be worth the churn if "Redis" remains the dominant term
+- [ ] API stability policy
+  - Document what is public API vs internal
+  - Semantic versioning guarantees
+  - Deprecation policy (warnings for N versions before removal)
+
+## Additional Redis Features
+
+- [ ] Investigate Pub/Sub support
+  - `publish()`, `subscribe()`, channel patterns
+  - May need async support first
+- [ ] Investigate Redis Streams support
+  - `xadd()`, `xread()`, `xrange()`, `xlen()`, `xdel()`, `xtrim()`
+  - Consumer groups: `xgroup_create()`, `xreadgroup()`, `xack()`
+- [ ] Investigate Lua scripting support
+  - `eval()`, `evalsha()`, `script_load()`
+  - Useful for atomic operations
+- [ ] Pipeline/transaction support
+  - `pipeline()` context manager for batching
+  - `MULTI`/`EXEC` transaction support
+- [ ] Blocking list operations
+  - `blpop()`, `brpop()`, `blmove()`, `brpoplpush()`
+  - Requires timeout handling
+- [ ] Add `blocking` parameter to `cache.lock()` (like django-redis has)
+- [ ] JSON serializer with datetime support
+  - django-redis JSONSerializer supports datetime, date, time, timedelta
+  - Our JSONSerializer only handles basic JSON types
+
 ## Testing
 
 - [x] Use testcontainers with Redis and Valkey images instead of Docker Compose
   - Parametrized session fixture for Redis/Valkey/redis-stack-server
 - [ ] Fake cache backend (locmem-style or fakeredis) for testing without Redis
+- [ ] Performance/benchmark tests
+  - Measure serialization overhead
+  - Measure compression overhead
+  - Compare with Django builtin redis backend
+  - Compare with django-redis
+- [ ] Edge case coverage review
+  - Large values (> 512MB)
+  - Unicode edge cases
+  - Connection failure scenarios
+  - Timeout edge cases
+- [ ] Integration tests with real Redis Cluster (multi-node)
+  - Currently using single-container cluster image
 
 ## Code Quality
 
@@ -95,6 +142,12 @@ Features and changes we want to make.
   - Marker class to prevent double-prefixing in `make_key()`
   - `make_key()` is only called internally, so double-prefixing shouldn't happen
   - May be unnecessary defensive programming
+- [ ] Add docstrings incrementally
+  - Currently using `"D"` ignore in ruff for docstrings
+  - Start with public API methods
+  - Use Google-style docstrings
+- [ ] Verify py.typed marker is present for PEP 561
+  - Allows type checkers to use our type hints
 
 ## Tooling/Infrastructure
 
@@ -103,3 +156,47 @@ Features and changes we want to make.
 - [x] MkDocs documentation with Material theme
 - [x] Modern CI/CD with auto-tagging and publishing
 - [x] Update CI matrix for Python 3.12-3.14 and Django 5.2-6.0
+- [ ] Add SECURITY.md with security policy
+  - How to report vulnerabilities
+  - Supported versions
+  - Security considerations (pickle, etc.)
+- [ ] Document release process
+  - Versioning strategy (SemVer)
+  - Changelog maintenance
+  - PyPI publishing workflow
+
+## Documentation
+
+- [ ] Migration guide from django-redis
+  - Configuration differences
+  - API differences
+  - Feature comparison
+- [ ] Migration guide from Django's builtin redis backend
+  - What you gain by switching
+  - Configuration mapping
+- [ ] Compare features with competing packages
+  - django-redis (jazzband): https://github.com/jazzband/django-redis
+  - django-valkey: https://github.com/django-commons/django-valkey
+  - Django builtin: django.core.cache.backends.redis
+  - Document what we have that others don't, and vice versa
+- [ ] Performance tuning guide
+  - Connection pool sizing
+  - Serializer selection
+  - Compression tradeoffs
+  - Replica routing
+- [ ] Troubleshooting guide
+  - Common errors and solutions
+  - Connection issues
+  - Serialization issues
+- [ ] More examples/recipes
+  - Session storage setup
+  - Rate limiting pattern
+  - Cache invalidation patterns
+  - Multi-tenant caching
+- [ ] Review API reference completeness
+  - Ensure all public methods documented
+  - Add examples for each method
+  - Document all OPTIONS parameters
+- [ ] Document all configuration options in one place
+  - Currently spread across multiple doc pages
+  - Single reference page with all OPTIONS
