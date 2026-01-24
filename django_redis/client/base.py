@@ -1280,33 +1280,32 @@ try:
         _client_class = Valkey
         _pool_class = ValkeyConnectionPool
 
-    # Try to import Valkey Sentinel
-    try:
-        from valkey.sentinel import Sentinel as ValkeySentinel
-        from valkey.sentinel import SentinelConnectionPool as ValkeySentinelConnectionPool
+    # NOTE: ValkeySentinelCacheClient is not currently provided due to a bug in valkey-py.
+    # The valkey-py library's SentinelManagedConnection is missing the `_get_from_local_cache`
+    # method which causes AttributeError when using Sentinel connections.
+    # See: https://github.com/valkey-io/valkey-py/issues
+    # Once the upstream bug is fixed, we can re-enable this by uncommenting the code below:
+    #
+    # from valkey.sentinel import Sentinel as ValkeySentinel
+    # from valkey.sentinel import SentinelConnectionPool as ValkeySentinelConnectionPool
+    #
+    # class ValkeySentinelCacheClient(KeyValueSentinelCacheClient[Valkey, ValkeySentinel, ValkeySentinelConnectionPool]):
+    #     """Valkey Sentinel cache backend."""
+    #     _client_class = Valkey
+    #     _pool_class = ValkeySentinelConnectionPool
+    #     _sentinel_class = ValkeySentinel
+    #     _sentinel_pool_class = ValkeySentinelConnectionPool
 
-        class ValkeySentinelCacheClient(KeyValueSentinelCacheClient[Valkey, ValkeySentinel, ValkeySentinelConnectionPool]):
-            """Valkey Sentinel cache backend.
+    class ValkeySentinelCacheClient(KeyValueCacheClient):  # type: ignore[no-redef]
+        """Valkey Sentinel cache backend (currently unavailable due to valkey-py bug)."""
 
-            Automatically discovers primary and replica nodes via Valkey Sentinel.
-
-            Use as: BACKEND = "django_redis.client.ValkeySentinelCacheClient"
-            """
-
-            _client_class = Valkey
-            _pool_class = ValkeySentinelConnectionPool  # type: ignore[assignment]
-            _sentinel_class = ValkeySentinel
-            _sentinel_pool_class = ValkeySentinelConnectionPool
-
-    except ImportError:
-        class ValkeySentinelCacheClient(KeyValueCacheClient):  # type: ignore[no-redef]
-            """Valkey Sentinel cache backend (requires valkey-py with sentinel support)."""
-
-            def __init__(self, *args, **kwargs):
-                raise ImportError(
-                    "ValkeySentinelCacheClient requires valkey-py with sentinel support. "
-                    "Install it with: pip install valkey"
-                )
+        def __init__(self, *args, **kwargs):
+            raise NotImplementedError(
+                "ValkeySentinelCacheClient is currently unavailable due to a bug in valkey-py. "
+                "The SentinelManagedConnection class is missing the '_get_from_local_cache' method. "
+                "Use RedisSentinelCacheClient with a Valkey server instead (protocol compatible), "
+                "or wait for an upstream fix in valkey-py."
+            )
 
     # Try to import Valkey Cluster
     try:
@@ -1347,12 +1346,14 @@ except ImportError:
             )
 
     class ValkeySentinelCacheClient(KeyValueCacheClient):  # type: ignore[no-redef]
-        """Valkey Sentinel cache backend (requires valkey-py to be installed)."""
+        """Valkey Sentinel cache backend (currently unavailable due to valkey-py bug)."""
 
         def __init__(self, *args, **kwargs):
-            raise ImportError(
-                "ValkeySentinelCacheClient requires valkey-py to be installed. "
-                "Install it with: pip install valkey"
+            raise NotImplementedError(
+                "ValkeySentinelCacheClient is currently unavailable due to a bug in valkey-py. "
+                "The SentinelManagedConnection class is missing the '_get_from_local_cache' method. "
+                "Use RedisSentinelCacheClient with a Valkey server instead (protocol compatible), "
+                "or wait for an upstream fix in valkey-py."
             )
 
     class ValkeyClusterCacheClient(KeyValueCacheClient):  # type: ignore[no-redef]

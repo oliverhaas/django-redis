@@ -301,6 +301,10 @@ def _make_cache(
 
     # Handle sentinel mode - it overrides other settings
     if sentinel_mode_val:
+        # Skip valkey+sentinel combination due to valkey-py bug:
+        # SentinelManagedConnection is missing '_get_from_local_cache' method
+        if client_library == "valkey":
+            pytest.skip("valkey-py has a bug with Sentinel (missing _get_from_local_cache method)")
         sentinel_info: SentinelContainerInfo = request.getfixturevalue("sentinel_container")
         db = 8 if sentinel_mode_val == "sentinel_opts" else 7
         caches = build_sentinel_cache_config(
