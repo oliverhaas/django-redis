@@ -67,7 +67,7 @@ class ClusterClient(DefaultClient):
     def do_close_clients(self) -> None:
         """Close the cluster connection."""
         if self._clients[0] is not None:
-            self._clients[0].close()
+            self.connection_factory.disconnect(self._clients[0])
         self._clients = [None]
 
     def _group_keys_by_slot(
@@ -89,11 +89,10 @@ class ClusterClient(DefaultClient):
         version: int | None = None,
         client: RedisCluster | None = None,  # type: ignore[override]
     ) -> OrderedDict:
-        """Retrieve many keys, handling cross-slot keys by grouping.
+        """Retrieve many keys, handling cross-slot keys.
 
-        Unlike standalone Redis, cluster mode requires keys to be on the
-        same slot for MGET. This method groups keys by slot and performs
-        multiple MGET operations as needed.
+        Uses redis-py's mget_nonatomic which automatically splits keys by slot
+        and executes MGET for each slot group.
         """
         if client is None:
             client = self.get_client(write=False)
@@ -102,30 +101,19 @@ class ClusterClient(DefaultClient):
         if not keys_list:
             return OrderedDict()
 
-        recovered_data = OrderedDict()
-
-        # Create mapping of made_key -> original_key
+        # Create mapping of made_key -> original_key (preserves order)
         map_keys = OrderedDict((self.make_key(k, version=version), k) for k in keys_list)
 
-        # Group keys by slot
-        slots = self._group_keys_by_slot(map_keys.keys())
-
         try:
-            # Execute MGET for each slot group
-            all_results: dict[KeyT, Any] = {}
-            for slot_keys in slots.values():
-                if len(slot_keys) == 1:
-                    # Single key - use GET
-                    value = cast("bytes | None", client.get(slot_keys[0]))
-                    all_results[slot_keys[0]] = value
-                else:
-                    # Multiple keys in same slot - use MGET
-                    results = cast("list[bytes | None]", client.mget(*slot_keys))
-                    all_results |= dict(zip(slot_keys, results, strict=False))
+            # mget_nonatomic handles slot splitting and returns values in order
+            results = cast(
+                "list[bytes | None]",
+                client.mget_nonatomic(list(map_keys.keys())),
+            )
 
-            # Build result in original order
-            for made_key, original_key in map_keys.items():
-                value = all_results.get(made_key)
+            # Build result in original order, skipping None values
+            recovered_data = OrderedDict()
+            for (_, original_key), value in zip(map_keys.items(), results, strict=True):
                 if value is not None:
                     recovered_data[original_key] = self.decode(value)
 
@@ -175,15 +163,40 @@ class ClusterClient(DefaultClient):
     ) -> None:
         """Set multiple values, handling cross-slot keys.
 
-        Uses individual SET commands since MSET requires same-slot keys.
+        Uses redis-py's mset_nonatomic which automatically splits keys by slot
+        and executes MSET for each slot group.
+
+        Note: mset_nonatomic doesn't support expiry, so we set expiry separately
+        using a pipeline for efficiency.
         """
         if client is None:
             client = self.get_client(write=True)
 
+        if not data:
+            return
+
+        # Handle DEFAULT_TIMEOUT sentinel
+        if timeout is DEFAULT_TIMEOUT:
+            timeout = self._backend.default_timeout
+
+        # Prepare data with made keys and encoded values
+        prepared_data = {self.make_key(k, version=version): self.encode(v) for k, v in data.items()}
+
         try:
-            # Use individual set operations - cluster handles routing
-            for key, value in data.items():
-                self.set(key, value, timeout, version=version, client=client)
+            # mset_nonatomic handles slot splitting automatically
+            client.mset_nonatomic(prepared_data)
+
+            # Set expiry if needed (MSET doesn't support expiry)
+            if timeout is not None:
+                # Convert timeout to milliseconds
+                timeout_ms = int(timeout * 1000)
+                if timeout_ms > 0:
+                    # Use pipeline to set expiry on all keys efficiently
+                    # Note: Pipeline in cluster mode handles slot routing
+                    pipe = client.pipeline()
+                    for key in prepared_data:
+                        pipe.pexpire(key, timeout_ms)
+                    pipe.execute()
         except Exception as e:
             raise ConnectionInterrupted(connection=client) from e
 

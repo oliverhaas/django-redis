@@ -88,7 +88,7 @@ class RedisCache(BaseCache):
         return self._client
 
     # =========================================================================
-    # Django Cache Interface Methods (fully typed)
+    # Django Cache Interface Methods
     # =========================================================================
 
     @omit_exception
@@ -315,7 +315,7 @@ class RedisCache(BaseCache):
         return self.client.touch(key, timeout=timeout, version=version)
 
     # =========================================================================
-    # Redis Set Operations (passthrough to mixin)
+    # Redis Set Operations
     # =========================================================================
 
     @omit_exception
@@ -387,7 +387,7 @@ class RedisCache(BaseCache):
         return self.client.sunionstore(*args, **kwargs)
 
     # =========================================================================
-    # Redis Hash Operations (passthrough to mixin)
+    # Redis Hash Operations
     # =========================================================================
 
     @omit_exception
@@ -443,7 +443,7 @@ class RedisCache(BaseCache):
         return self.client.hvals(*args, **kwargs)
 
     # =========================================================================
-    # Redis Sorted Set Operations (passthrough to mixin)
+    # Redis Sorted Set Operations
     # =========================================================================
 
     @omit_exception
@@ -515,7 +515,7 @@ class RedisCache(BaseCache):
         return self.client.zremrangebyrank(*args, **kwargs)
 
     # =========================================================================
-    # Redis List Operations (passthrough to mixin)
+    # Redis List Operations
     # =========================================================================
 
     @omit_exception

@@ -61,6 +61,7 @@ nav:
       - Serializers: user-guide/serializers.md
       - Compression: user-guide/compression.md
       - Sentinel: user-guide/sentinel.md
+      - Cluster: user-guide/cluster.md
   - Reference:
       - API: reference/api.md
       - Changelog: reference/changelog.md

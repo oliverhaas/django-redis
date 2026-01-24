@@ -311,8 +311,8 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=5.2,<6.1" },
-    { name = "redis", specifier = ">=5.2.1,<6" },
-    { name = "redis", extras = ["hiredis"], marker = "extra == 'hiredis'", specifier = ">=5.2.1,<6" },
+    { name = "redis", specifier = ">=5.2.1,<8" },
+    { name = "redis", extras = ["hiredis"], marker = "extra == 'hiredis'", specifier = ">=5.2.1,<8" },
 ]
 provides-extras = ["hiredis"]
 

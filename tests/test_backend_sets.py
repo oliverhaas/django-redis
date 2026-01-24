@@ -15,48 +15,55 @@ class TestSetOperations:
         assert cache.scard("foo") == 2
 
     def test_sdiff(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2")
-        cache.sadd("foo2", "bar2", "bar3")
-        assert cache.sdiff("foo1", "foo2") == {"bar1"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2")
+        cache.sadd("{foo}2", "bar2", "bar3")
+        assert cache.sdiff("{foo}1", "{foo}2") == {"bar1"}
 
     def test_sdiffstore(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2")
-        cache.sadd("foo2", "bar2", "bar3")
-        assert cache.sdiffstore("foo3", "foo1", "foo2") == 1
-        assert cache.smembers("foo3") == {"bar1"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2")
+        cache.sadd("{foo}2", "bar2", "bar3")
+        assert cache.sdiffstore("{foo}3", "{foo}1", "{foo}2") == 1
+        assert cache.smembers("{foo}3") == {"bar1"}
 
     def test_sdiffstore_with_keys_version(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2", version=2)
-        cache.sadd("foo2", "bar2", "bar3", version=2)
-        assert cache.sdiffstore("foo3", "foo1", "foo2", version_keys=2) == 1
-        assert cache.smembers("foo3") == {"bar1"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2", version=2)
+        cache.sadd("{foo}2", "bar2", "bar3", version=2)
+        assert cache.sdiffstore("{foo}3", "{foo}1", "{foo}2", version_keys=2) == 1
+        assert cache.smembers("{foo}3") == {"bar1"}
 
     def test_sdiffstore_with_different_keys_versions_without_initial_set_in_version(
         self,
         cache: RedisCache,
     ):
-        cache.sadd("foo1", "bar1", "bar2", version=1)
-        cache.sadd("foo2", "bar2", "bar3", version=2)
-        assert cache.sdiffstore("foo3", "foo1", "foo2", version_keys=2) == 0
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2", version=1)
+        cache.sadd("{foo}2", "bar2", "bar3", version=2)
+        assert cache.sdiffstore("{foo}3", "{foo}1", "{foo}2", version_keys=2) == 0
 
     def test_sdiffstore_with_different_keys_versions_with_initial_set_in_version(
         self,
         cache: RedisCache,
     ):
-        cache.sadd("foo1", "bar1", "bar2", version=2)
-        cache.sadd("foo2", "bar2", "bar3", version=1)
-        assert cache.sdiffstore("foo3", "foo1", "foo2", version_keys=2) == 2
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2", version=2)
+        cache.sadd("{foo}2", "bar2", "bar3", version=1)
+        assert cache.sdiffstore("{foo}3", "{foo}1", "{foo}2", version_keys=2) == 2
 
     def test_sinter(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2")
-        cache.sadd("foo2", "bar2", "bar3")
-        assert cache.sinter("foo1", "foo2") == {"bar2"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2")
+        cache.sadd("{foo}2", "bar2", "bar3")
+        assert cache.sinter("{foo}1", "{foo}2") == {"bar2"}
 
     def test_interstore(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2")
-        cache.sadd("foo2", "bar2", "bar3")
-        assert cache.sinterstore("foo3", "foo1", "foo2") == 1
-        assert cache.smembers("foo3") == {"bar2"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2")
+        cache.sadd("{foo}2", "bar2", "bar3")
+        assert cache.sinterstore("{foo}3", "{foo}1", "{foo}2") == 1
+        assert cache.smembers("{foo}3") == {"bar2"}
 
     def test_sismember(self, cache: RedisCache):
         cache.sadd("foo", "bar")
@@ -64,12 +71,13 @@ class TestSetOperations:
         assert cache.sismember("foo", "bar2") is False
 
     def test_smove(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2")
-        cache.sadd("foo2", "bar2", "bar3")
-        assert cache.smove("foo1", "foo2", "bar1") is True
-        assert cache.smove("foo1", "foo2", "bar4") is False
-        assert cache.smembers("foo1") == {"bar2"}
-        assert cache.smembers("foo2") == {"bar1", "bar2", "bar3"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2")
+        cache.sadd("{foo}2", "bar2", "bar3")
+        assert cache.smove("{foo}1", "{foo}2", "bar1") is True
+        assert cache.smove("{foo}1", "{foo}2", "bar4") is False
+        assert cache.smembers("{foo}1") == {"bar2"}
+        assert cache.smembers("{foo}2") == {"bar1", "bar2", "bar3"}
 
     def test_spop_default_count(self, cache: RedisCache):
         cache.sadd("foo", "bar1", "bar2")
@@ -125,12 +133,14 @@ class TestSetOperations:
         assert cache.smismember("foo", "bar1", "bar2", "xyz") == [True, True, False]
 
     def test_sunion(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2")
-        cache.sadd("foo2", "bar2", "bar3")
-        assert cache.sunion("foo1", "foo2") == {"bar1", "bar2", "bar3"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2")
+        cache.sadd("{foo}2", "bar2", "bar3")
+        assert cache.sunion("{foo}1", "{foo}2") == {"bar1", "bar2", "bar3"}
 
     def test_sunionstore(self, cache: RedisCache):
-        cache.sadd("foo1", "bar1", "bar2")
-        cache.sadd("foo2", "bar2", "bar3")
-        assert cache.sunionstore("foo3", "foo1", "foo2") == 3
-        assert cache.smembers("foo3") == {"bar1", "bar2", "bar3"}
+        # Use hash tags {foo} to ensure keys are on same cluster slot
+        cache.sadd("{foo}1", "bar1", "bar2")
+        cache.sadd("{foo}2", "bar2", "bar3")
+        assert cache.sunionstore("{foo}3", "{foo}1", "{foo}2") == 3
+        assert cache.smembers("{foo}3") == {"bar1", "bar2", "bar3"}

@@ -130,8 +130,13 @@ class TestIterKeysOperations:
 
 class TestClientSwitching:
     def test_primary_replica_switching(self, cache: RedisCache):
+        from django_redis.client.cluster import ClusterClient
+
         cache = cast("RedisCache", caches["sample"])
         client = cache.client
+        # ClusterClient doesn't support primary/replica switching - cluster handles routing
+        if isinstance(client, ClusterClient):
+            pytest.skip("ClusterClient doesn't support primary/replica switching")
         client._server = ["foo", "bar"]
         client._clients = ["Foo", "Bar"]
 
@@ -139,8 +144,13 @@ class TestClientSwitching:
         assert client.get_client(write=False) == "Bar"
 
     def test_primary_replica_switching_with_index(self, cache: RedisCache):
+        from django_redis.client.cluster import ClusterClient
+
         cache = cast("RedisCache", caches["sample"])
         client = cache.client
+        # ClusterClient doesn't support primary/replica switching - cluster handles routing
+        if isinstance(client, ClusterClient):
+            pytest.skip("ClusterClient doesn't support primary/replica switching")
         client._server = ["foo", "bar"]
         client._clients = ["Foo", "Bar"]
 

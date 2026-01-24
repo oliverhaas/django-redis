@@ -46,7 +46,7 @@ CACHES = {
 
 ## Cluster Client
 
-For Redis Cluster deployments with server-side sharding across multiple nodes:
+For Redis Cluster deployments with server-side sharding across multiple nodes. See [Cluster](cluster.md) for detailed configuration and slot handling.
 
 ```python
 CACHES = {
@@ -61,28 +61,7 @@ CACHES = {
 }
 ```
 
-With password and timeouts:
-
-```python
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:7000",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.ClusterClient",
-            "CONNECTION_FACTORY": "django_redis.pool.ClusterConnectionFactory",
-            "PASSWORD": "your-password",
-            "SOCKET_TIMEOUT": 5,
-            "SOCKET_CONNECT_TIMEOUT": 3,
-        }
-    }
-}
-```
-
 !!! note "Cluster Behavior"
-    - The cluster handles routing to the correct node automatically
-    - Multi-key operations (`get_many`, `delete_many`, `set_many`) are cluster-aware and handle cross-slot keys automatically by grouping operations
-    - Key iteration (`keys`, `iter_keys`, `delete_pattern`) scans all primary nodes in the cluster
-    - Use hash tags like `{prefix}key` to ensure related keys go to the same slot for better performance
-    - Automatic failover is handled by the cluster
-    - `clear()` flushes all primary nodes in the cluster
+    - Django cache interface methods (`get_many`, `set_many`, `delete_many`, `keys`, `clear`, etc.) are cluster-aware and handle cross-slot keys automatically
+    - Direct Redis method wrappers (sets, lists, hashes) pass through to Redis - use hash tags for multi-key operations
+    - See the [Cluster documentation](cluster.md) for details on slot handling and hash tags

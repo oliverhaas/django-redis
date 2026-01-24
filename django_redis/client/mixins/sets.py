@@ -127,7 +127,7 @@ class SetMixin(ClientProtocol):
 
         nkey = self.make_key(key, version=version)
         nmember = self.encode(member)
-        return cast("bool", client.sismember(nkey, nmember))
+        return bool(client.sismember(nkey, nmember))
 
     def smembers(
         self,

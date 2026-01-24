@@ -243,6 +243,10 @@ class ClusterConnectionFactory:
     def disconnect(self, connection: RedisCluster) -> None:
         """Disconnect from a Redis Cluster."""
         connection.close()
+        # Remove from cache so next connect() creates a fresh connection
+        urls_to_remove = [url for url, cluster in self._clusters.items() if cluster is connection]
+        for url in urls_to_remove:
+            del self._clusters[url]
 
 
 def get_connection_factory(path=None, options=None):

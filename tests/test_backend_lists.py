@@ -197,31 +197,34 @@ class TestListOperations:
 
     def test_lmove_basic(self, cache: RedisCache):
         """Test moving element between lists."""
-        cache.rpush("src_list", "a", "b", "c")
-        cache.rpush("dst_list", "x", "y")
+        # Use hash tags {list} to ensure keys are on same cluster slot
+        cache.rpush("{list}src", "a", "b", "c")
+        cache.rpush("{list}dst", "x", "y")
 
         # Move from src LEFT to dst RIGHT
-        result = cache.lmove("src_list", "dst_list", "LEFT", "RIGHT")
+        result = cache.lmove("{list}src", "{list}dst", "LEFT", "RIGHT")
         assert result == "a"
 
-        assert cache.lrange("src_list", 0, -1) == ["b", "c"]
-        assert cache.lrange("dst_list", 0, -1) == ["x", "y", "a"]
+        assert cache.lrange("{list}src", 0, -1) == ["b", "c"]
+        assert cache.lrange("{list}dst", 0, -1) == ["x", "y", "a"]
 
     def test_lmove_directions(self, cache: RedisCache):
         """Test different lmove directions."""
-        cache.rpush("src2", "1", "2", "3")
-        cache.rpush("dst2", "a")
+        # Use hash tags {list} to ensure keys are on same cluster slot
+        cache.rpush("{list}src2", "1", "2", "3")
+        cache.rpush("{list}dst2", "a")
 
         # RIGHT to LEFT (rpoplpush equivalent)
-        result = cache.lmove("src2", "dst2", "RIGHT", "LEFT")
+        result = cache.lmove("{list}src2", "{list}dst2", "RIGHT", "LEFT")
         assert result == "3"
-        assert cache.lrange("src2", 0, -1) == ["1", "2"]
-        assert cache.lrange("dst2", 0, -1) == ["3", "a"]
+        assert cache.lrange("{list}src2", 0, -1) == ["1", "2"]
+        assert cache.lrange("{list}dst2", 0, -1) == ["3", "a"]
 
     def test_lmove_empty_source(self, cache: RedisCache):
         """Test lmove on empty source list."""
-        cache.rpush("dst3", "x")
+        # Use hash tags {list} to ensure keys are on same cluster slot
+        cache.rpush("{list}dst3", "x")
 
-        result = cache.lmove("empty_src", "dst3", "LEFT", "RIGHT")
+        result = cache.lmove("{list}empty_src", "{list}dst3", "LEFT", "RIGHT")
         assert result is None
-        assert cache.lrange("dst3", 0, -1) == ["x"]
+        assert cache.lrange("{list}dst3", 0, -1) == ["x"]

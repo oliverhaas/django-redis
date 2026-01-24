@@ -189,7 +189,7 @@ class HashMixin(ClientProtocol):
             client = self.get_client(write=True)
         nkey = self.make_key(key, version=version)
         nvalue = self.encode(value)
-        return cast("bool", client.hsetnx(nkey, field, nvalue))
+        return bool(client.hsetnx(nkey, field, nvalue))
 
     def hvals(
         self,

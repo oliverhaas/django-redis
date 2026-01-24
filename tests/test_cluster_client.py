@@ -198,7 +198,7 @@ class TestClusterClient:
 
     @patch("django_redis.pool.get_connection_factory")
     def test_do_close_clients(self, mock_get_factory):
-        """Test do_close_clients closes the cluster connection."""
+        """Test do_close_clients closes the cluster connection via factory."""
         mock_cluster = MagicMock()
         mock_factory = MagicMock()
         mock_factory.connect.return_value = mock_cluster
@@ -221,7 +221,7 @@ class TestClusterClient:
         # Close
         client.do_close_clients()
 
-        mock_cluster.close.assert_called_once()
+        mock_factory.disconnect.assert_called_once_with(mock_cluster)
         assert client._clients == [None]
 
     @patch("django_redis.pool.get_connection_factory")
@@ -278,8 +278,8 @@ class TestClusterClient:
         assert total_keys == 3
 
     @patch("django_redis.pool.get_connection_factory")
-    def test_get_many_groups_by_slot(self, mock_get_factory):
-        """Test get_many handles cross-slot keys."""
+    def test_get_many_uses_mget_nonatomic(self, mock_get_factory):
+        """Test get_many uses mget_nonatomic for cross-slot keys."""
         import pickle
 
         mock_cluster = MagicMock()
@@ -298,25 +298,24 @@ class TestClusterClient:
             backend=mock_backend,
         )
 
-        # Mock get/mget responses with pickled data
-        # {a} -> slot 15495 (single key, uses GET)
-        # {b} -> slot 3300 (two keys, uses MGET)
-        mock_cluster.get.return_value = pickle.dumps("value_a")
-        mock_cluster.mget.return_value = [pickle.dumps("value_b1"), pickle.dumps("value_b2")]
+        # Mock mget_nonatomic response with pickled data
+        # mget_nonatomic handles slot splitting internally and returns values in order
+        mock_cluster.mget_nonatomic.return_value = [
+            pickle.dumps("value_a"),
+            pickle.dumps("value_b"),
+            pickle.dumps("value_c"),
+        ]
 
-        # Using hash tags that hash to different slots:
-        # {a}key1 -> slot 15495, {b}key2 and {b}key3 -> slot 3300
-        result = client.get_many(["{a}key1", "{b}key2", "{b}key3"])
+        # Using hash tags that hash to different slots
+        result = client.get_many(["{a}key1", "{b}key2", "{c}key3"])
 
         # Should return decoded values
         assert len(result) == 3
-        # Single key in slot uses GET
-        mock_cluster.get.assert_called_once()
-        # Multiple keys in same slot uses MGET
-        mock_cluster.mget.assert_called_once()
+        # mget_nonatomic is called once with all keys
+        mock_cluster.mget_nonatomic.assert_called_once()
         assert "value_a" in result.values()
-        assert "value_b1" in result.values()
-        assert "value_b2" in result.values()
+        assert "value_b" in result.values()
+        assert "value_c" in result.values()
 
     @patch("django_redis.pool.get_connection_factory")
     def test_get_many_empty_keys(self, mock_get_factory):
@@ -419,8 +418,8 @@ class TestClusterClient:
         assert result == 3
 
     @patch("django_redis.pool.get_connection_factory")
-    def test_set_many(self, mock_get_factory):
-        """Test set_many sets values individually for cross-slot keys."""
+    def test_set_many_uses_mset_nonatomic(self, mock_get_factory):
+        """Test set_many uses mset_nonatomic for cross-slot keys."""
         mock_cluster = MagicMock()
         mock_factory = MagicMock()
         mock_factory.connect.return_value = mock_cluster
@@ -429,7 +428,7 @@ class TestClusterClient:
         mock_backend = MagicMock()
         mock_backend.key_prefix = ""
         mock_backend.version = 1
-        mock_backend.default_timeout = 300
+        mock_backend.default_timeout = None  # No timeout, so no pexpire calls
         mock_backend.key_func = lambda k, p, v: k
 
         client = ClusterClient(
@@ -438,14 +437,16 @@ class TestClusterClient:
             backend=mock_backend,
         )
 
-        mock_cluster.set.return_value = True
+        mock_cluster.mset_nonatomic.return_value = [True, True, True]
 
         # Using hash tags that hash to different slots:
         # {a} -> slot 15495, {b} -> slot 3300, {c} -> slot 7365
         client.set_many({"{a}key1": "value1", "{b}key2": "value2", "{c}key3": "value3"})
 
-        # Should call set for each key (3 keys = 3 calls)
-        assert mock_cluster.set.call_count == 3
+        # mset_nonatomic is called once with all key-value pairs
+        mock_cluster.mset_nonatomic.assert_called_once()
+        # No pipeline calls since timeout is None
+        mock_cluster.pipeline.assert_not_called()
 
     @patch("django_redis.pool.get_connection_factory")
     def test_clear_flushes_all_primaries(self, mock_get_factory):

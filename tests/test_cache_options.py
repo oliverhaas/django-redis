@@ -117,6 +117,8 @@ class TestDjangoRedisCacheEscapePrefix:
 
 
 def test_custom_key_function(cache: RedisCache, settings):
+    from redis.cluster import RedisCluster
+
     caches_setting = copy.deepcopy(settings.CACHES)
     caches_setting["default"]["KEY_FUNCTION"] = "test_cache_options.make_key"
     caches_setting["default"]["REVERSE_KEY_FUNCTION"] = "test_cache_options.reverse_key"
@@ -131,4 +133,10 @@ def test_custom_key_function(cache: RedisCache, settings):
     keys = cache.keys("foo*")
     assert set(keys) == {"foo-bb", "foo-bc"}
     # ensure our custom function was actually called
-    assert {k.decode() for k in cache.client.get_client(write=False).keys("*")} == ({"#1#foo-bc", "#1#foo-bb"})
+    client = cache.client.get_client(write=False)
+    if isinstance(client, RedisCluster):
+        # In cluster mode, query all primary nodes
+        raw_keys = client.keys("*", target_nodes=RedisCluster.PRIMARIES)
+    else:
+        raw_keys = client.keys("*")
+    assert {k.decode() for k in raw_keys} == {"#1#foo-bc", "#1#foo-bb"}
