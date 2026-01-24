@@ -610,6 +610,28 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cluster/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Cluster
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -821,7 +843,7 @@
 </span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
 </span></code></pre></div>
 <h2 id="cluster-client">Cluster Client<a class="headerlink" href="#cluster-client" title="Permanent link">&para;</a></h2>
-<p>For Redis Cluster deployments with server-side sharding across multiple nodes:</p>
+<p>For Redis Cluster deployments with server-side sharding across multiple nodes. See <a href="../cluster/">Cluster</a> for detailed configuration and slot handling.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">CACHES</span> <span class="o">=</span> <span class="p">{</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.cache.RedisCache&quot;</span><span class="p">,</span>
@@ -833,30 +855,12 @@
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="p">}</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">}</span>
 </span></code></pre></div>
-<p>With password and timeouts:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">CACHES</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="s2">&quot;BACKEND&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.cache.RedisCache&quot;</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="s2">&quot;LOCATION&quot;</span><span class="p">:</span> <span class="s2">&quot;redis://127.0.0.1:7000&quot;</span><span class="p">,</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        <span class="s2">&quot;OPTIONS&quot;</span><span class="p">:</span> <span class="p">{</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>            <span class="s2">&quot;CLIENT_CLASS&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.client.ClusterClient&quot;</span><span class="p">,</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>            <span class="s2">&quot;CONNECTION_FACTORY&quot;</span><span class="p">:</span> <span class="s2">&quot;django_redis.pool.ClusterConnectionFactory&quot;</span><span class="p">,</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>            <span class="s2">&quot;PASSWORD&quot;</span><span class="p">:</span> <span class="s2">&quot;your-password&quot;</span><span class="p">,</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>            <span class="s2">&quot;SOCKET_TIMEOUT&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>            <span class="s2">&quot;SOCKET_CONNECT_TIMEOUT&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        <span class="p">}</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="p">}</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="p">}</span>
-</span></code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Cluster Behavior</p>
 <ul>
-<li>The cluster handles routing to the correct node automatically</li>
-<li>Multi-key operations (<code>get_many</code>, <code>delete_many</code>, <code>set_many</code>) are cluster-aware and handle cross-slot keys automatically by grouping operations</li>
-<li>Key iteration (<code>keys</code>, <code>iter_keys</code>, <code>delete_pattern</code>) scans all primary nodes in the cluster</li>
-<li>Use hash tags like <code>{prefix}key</code> to ensure related keys go to the same slot for better performance</li>
-<li>Automatic failover is handled by the cluster</li>
-<li><code>clear()</code> flushes all primary nodes in the cluster</li>
+<li>Django cache interface methods (<code>get_many</code>, <code>set_many</code>, <code>delete_many</code>, <code>keys</code>, <code>clear</code>, etc.) are cluster-aware and handle cross-slot keys automatically</li>
+<li>Direct Redis method wrappers (sets, lists, hashes) pass through to Redis - use hash tags for multi-key operations</li>
+<li>See the <a href="../cluster/">Cluster documentation</a> for details on slot handling and hash tags</li>
 </ul>
 </div>
 
