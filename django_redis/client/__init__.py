@@ -1,18 +1,19 @@
 # Unified cache clients
-from django_redis.client.base import (
-    # Generic base classes
-    KeyValueCacheClient,
-    KeyValueClusterCacheClient,
-    KeyValueSentinelCacheClient,
-    # Redis implementations
+from django_redis.client.cluster import (
     ClusterCacheClient,  # Backwards compat alias for RedisClusterCacheClient
-    RedisCacheClient,
+    KeyValueClusterCacheClient,
     RedisClusterCacheClient,
+    ValkeyClusterCacheClient,
+)
+from django_redis.client.default import (
+    KeyValueCacheClient,
+    RedisCacheClient,
+    ValkeyCacheClient,
+)
+from django_redis.client.sentinel import (
+    KeyValueSentinelCacheClient,
     RedisSentinelCacheClient,
     SentinelCacheClient,  # Backwards compat alias for RedisSentinelCacheClient
-    # Valkey implementations
-    ValkeyCacheClient,
-    ValkeyClusterCacheClient,
     ValkeySentinelCacheClient,
 )
 

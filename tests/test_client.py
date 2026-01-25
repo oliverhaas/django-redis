@@ -25,7 +25,19 @@ class TestClientClose:
     ):
         cache_client._options.clear()
         # With new architecture, close() disconnects pools directly
-        mock = mocker.patch.object(cache_client._pools.get(list(cache_client._pools.keys())[0], Mock()), "disconnect", create=True)
+        # ClusterCacheClient uses _clusters instead of _pools
+        if "ClusterCacheClient" in type(cache_client).__name__:
+            if cache_client._clusters:
+                url = list(cache_client._clusters.keys())[0]
+                mock = mocker.patch.object(cache_client._clusters[url], "close", create=True)
+            else:
+                mock = Mock()
+        else:
+            if cache_client._pools:
+                url = list(cache_client._pools.keys())[0]
+                mock = mocker.patch.object(cache_client._pools[url], "disconnect", create=True)
+            else:
+                mock = Mock()
         cache_client.close()
         # By default, close_connection is False, so disconnect shouldn't be called
         # unless close_connection option is set

@@ -26,13 +26,17 @@ def is_compressor_instance(obj: Any) -> bool:
     )
 
 
-def create_serializer(config: str | type | Any, options: dict | None = None) -> Any:
+def create_serializer(config: str | type | Any | None, options: dict | None = None) -> Any:
     """Create a serializer instance from config.
 
     Args:
-        config: A dotted path string, a class, or an instance
+        config: A dotted path string, a class, an instance, or None for default pickle
         options: Optional options dict to pass to serializer constructor
     """
+    # None means default pickle serializer
+    if config is None:
+        config = "django_redis.serializers.pickle.PickleSerializer"
+
     # Already an instance
     if is_serializer_instance(config):
         return config
