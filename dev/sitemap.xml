@@ -2,50 +2,50 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/getting-started/installation/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/getting-started/quickstart/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/reference/api/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/reference/changelog/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/user-guide/advanced/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/user-guide/clients/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/user-guide/cluster/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/user-guide/compression/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/user-guide/configuration/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/user-guide/sentinel/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
     <url>
          <loc>https://oliverhaas.github.io/django-redis-ng/dev/user-guide/serializers/</loc>
-         <lastmod>2026-01-24</lastmod>
+         <lastmod>2026-01-25</lastmod>
     </url>
 </urlset>
